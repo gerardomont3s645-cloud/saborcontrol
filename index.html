@@ -28,6 +28,9 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 .fa-receipt::before{content:"🧾"}.fa-magnifying-glass::before{content:"🔍"}.fa-xmark::before{content:"✕"}.fa-circle-check::before{content:"✅"}
 nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7c3aed">
+<link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body class="h-full text-slate-800 flex flex-col max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white min-h-screen shadow-xl" x-data="appData()" x-init="initApp()">
 
@@ -1099,5 +1102,6 @@ window.FB = {
 };
 window.dispatchEvent(new Event("fb-ready"));
 </script>
+<script>if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
 </body>
 </html>
