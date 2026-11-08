@@ -46,6 +46,8 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <p class="text-sm text-center" x-text="cust ? 'Hola, ' + cust.name + '. Escribe tu clave.' : 'Primera vez: tu clave de acceso es 1234'"></p>
 <input type="password" inputmode="numeric" x-model="authPass" @keydown.enter="custEnter()" placeholder="Clave" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
 <button @click="custEnter()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Entrar</button>
+<button x-show="cust && cust.credId && webauthnOk" @click="bioEnter()" class="w-full bg-emerald-400 text-slate-900 font-bold py-3 rounded-xl">👆 Entrar con huella / patrón</button>
+<button x-show="cust" @click="goAuth('custReset'); resetPhone = ''; custForm.pass = ''" class="w-full text-xs text-amber-200 underline">Olvidé mi clave</button>
 <p class="text-xs text-amber-200 text-center" x-text="authError"></p>
 <button @click="goAuth('home')" class="w-full text-xs text-brand-100 underline">Volver</button>
 </div></template>
@@ -56,6 +58,14 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <input type="password" x-model="custForm.pass" placeholder="Crea tu propia clave (mín. 4)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
 <button @click="custCreate()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Guardar y entrar</button>
 <p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+</div></template>
+<template x-if="authView === 'custReset'"><div class="space-y-3">
+<p class="text-sm text-center">Recuperar mi clave</p>
+<input type="tel" inputmode="numeric" x-model="resetPhone" placeholder="Tu celular registrado" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="password" x-model="custForm.pass" placeholder="Nueva clave (mín. 4)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="resetPass()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Guardar nueva clave y entrar</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+<button @click="goAuth('custLogin')" class="w-full text-xs text-brand-100 underline">Volver</button>
 </div></template>
 <template x-if="authView === 'sellerLogin'"><div class="space-y-3">
 <p class="text-sm text-center">Acceso de vendedoras</p>
@@ -99,7 +109,8 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <template x-if="orderSent"><div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2 text-center"><p class="text-sm font-bold text-emerald-800">¡Pedido enviado! Espera la confirmación.</p><a :href="waLink(orderSent)" target="_blank" class="block bg-green-500 text-white font-bold py-2 rounded-xl text-xs">Avisar también por WhatsApp</a></div></template>
 <template x-if="myOrders.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Mis pedidos</h3>
 <template x-for="o in myOrders.slice(0, 5)" :key="o.id"><div class="bg-white border border-slate-200 rounded-xl p-3 text-xs"><div class="flex justify-between"><strong x-text="formatMoney(o.total)"></strong><span class="font-bold" :class="o.status === 'confirmed' ? 'text-emerald-600' : (o.status === 'rejected' ? 'text-rose-600' : 'text-amber-600')" x-text="o.status === 'confirmed' ? 'Confirmado' : (o.status === 'rejected' ? 'Rechazado' : 'Pendiente')"></span></div><p class="text-slate-500" x-text="itemsText(o)"></p></div></template></div></template>
-<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1"><p class="font-bold text-slate-700">Mi cuenta</p><p x-text="cust ? 'Nombre: ' + cust.name : ''"></p><p x-text="cust ? 'Celular: ' + cust.phone : ''"></p><p><button @click="showCustPass = !showCustPass" class="text-brand-600 underline" x-text="showCustPass ? 'Ocultar clave' : 'Ver mi clave'"></button> <strong x-show="showCustPass" x-text="cust ? cust.pass : ''"></strong></p></div>
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1"><p class="font-bold text-slate-700">Mi cuenta</p><p x-text="cust ? 'Nombre: ' + cust.name : ''"></p><p x-text="cust ? 'Celular: ' + cust.phone : ''"></p><p x-show="cust && webauthnOk"><button @click="cust && cust.credId ? null : enableBio()" class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg" x-text="cust && cust.credId ? '👆 Huella / patrón activado' : '👆 Activar huella / patrón'"></button></p>
+<p><button @click="showCustPass = !showCustPass" class="text-brand-600 underline" x-text="showCustPass ? 'Ocultar clave' : 'Ver mi clave'"></button> <strong x-show="showCustPass" x-text="cust ? cust.pass : ''"></strong></p></div>
 </div>
 <div class="bg-slate-900 text-white p-4 text-xs text-center space-y-1"><p x-text="'📍 ' + (menuInfo.address || 'Dirección por confirmar')"></p><p>📞 +504 9414-9886</p></div>
 </div>
@@ -694,6 +705,43 @@ if (phone.length < 8) { this.authError = 'Escribe un celular válido'; return; }
 if (String(f.pass).length < 4 || f.pass === '1234') { this.authError = 'Crea una clave de 4 o más caracteres (distinta de 1234)'; return; }
 this.cust = { name: f.name.trim(), phone: phone, pass: f.pass };
 try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.startCustomer();
+},
+resetPhone: '',
+get webauthnOk() { return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext); },
+b64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); },
+unb64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); },
+async enableBio() {
+try {
+const cred = await navigator.credentials.create({ publicKey: {
+challenge: crypto.getRandomValues(new Uint8Array(32)),
+rp: { name: 'SaborControl' },
+user: { id: new TextEncoder().encode(this.cust.phone), name: this.cust.phone, displayName: this.cust.name },
+pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+timeout: 60000 } });
+this.cust.credId = this.b64(cred.rawId);
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.showNotification('Huella / patrón activado');
+} catch (e) { this.showNotification('No se pudo activar. El celular debe tener huella o patrón configurado'); }
+},
+async bioEnter() {
+try {
+await navigator.credentials.get({ publicKey: {
+challenge: crypto.getRandomValues(new Uint8Array(32)),
+allowCredentials: [{ type: 'public-key', id: this.unb64(this.cust.credId) }],
+userVerification: 'required', timeout: 60000 } });
+this.startCustomer();
+} catch (e) { this.authError = 'No se pudo verificar. Usa tu clave.'; }
+},
+resetPass() {
+const ph = String(this.resetPhone).replace(/\D/g, '');
+if (!this.cust || ph !== this.cust.phone) { this.authError = 'Ese celular no coincide con el de tu cuenta'; return; }
+const p = String(this.custForm.pass);
+if (p.length < 4 || p === '1234') { this.authError = 'Crea una clave de 4 o más caracteres (distinta de 1234)'; return; }
+this.cust.pass = p;
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.custForm.pass = '';
 this.startCustomer();
 },
 startCustomer() {
