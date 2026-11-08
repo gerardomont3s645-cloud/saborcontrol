@@ -14,6 +14,13 @@ tailwind.config={theme:{extend:{colors:{brand:{50:'#f5f3ff',100:'#ede9fe',200:'#
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 [x-cloak]{display:none!important}
+@keyframes chefBounce{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-12px) rotate(4deg)}}
+@keyframes panFlip{0%,100%{transform:rotate(-18deg)}50%{transform:rotate(22deg) translateY(-6px)}}
+@keyframes steamUp{0%{opacity:0;transform:translateY(8px)}50%{opacity:.9}100%{opacity:0;transform:translateY(-22px)}}
+.chef{display:inline-block;font-size:84px;animation:chefBounce 1s ease-in-out infinite}
+.pan{position:absolute;font-size:40px;margin:46px 0 0 74px;animation:panFlip .8s ease-in-out infinite}
+.steam{position:absolute;font-size:20px;animation:steamUp 1.6s ease-in infinite}
+.steam.s1{margin:0 0 0 96px}.steam.s2{margin:0 0 0 62px;animation-delay:.8s}
 /* Iconos con emojis (sin librería externa) */
 .fa-solid,.fa-regular{font-style:normal;display:inline-block;line-height:1}
 .fa-solid::before,.fa-regular::before{content:"•"}
@@ -36,6 +43,38 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 
 <!-- AVISO NUEVO PEDIDO -->
 <div x-show="newOrderBanner && (role === 'seller' || role === 'admin')" x-cloak @click="activeTab = 'orders'; newOrderBanner = null" class="fixed top-2 left-2 right-2 max-w-md mx-auto z-50 bg-amber-400 text-slate-900 font-bold text-sm rounded-xl p-3 shadow-2xl cursor-pointer">🔔 <span x-text="newOrderBanner"></span> — toca para ver</div>
+
+<!-- ARMA TU DESAYUNO -->
+<div x-show="showBuild" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base">⭐ Arma tu desayuno</h3><button @click="showBuild = false" class="text-slate-400 text-lg">✕</button></div>
+<p class="text-xs text-slate-500" x-text="'Escoge lo que quieras. Precio: ' + formatMoney(menuBuild.price)"></p>
+<template x-for="g in buildGroups" :key="g.cat"><div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1" x-text="g.cat"></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="o in g.items" :key="o.name"><button type="button" @click="buildSel[o.name] = !buildSel[o.name]" :class="buildSel[o.name] ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left" x-text="(buildSel[o.name] ? '✔ ' : '') + o.name"></button></template></div></div></template>
+<p class="text-xs text-rose-600 text-center" x-text="buildMsg"></p>
+<button @click="addBuild()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl" x-text="'Agregar al pedido · ' + formatMoney(menuBuild.price)"></button>
+</div>
+</div>
+
+<!-- GRACIAS / GOLOSA -->
+<div x-show="showThanks && orderSent" x-cloak class="fixed inset-0 z-50 bg-gradient-to-b from-amber-100 to-orange-100 overflow-y-auto">
+<div class="max-w-md mx-auto p-6 text-center space-y-4 min-h-screen flex flex-col justify-center">
+<h2 class="text-2xl font-extrabold text-brand-700">¡Gracias por su compra!</h2>
+<div x-show="orderStatus !== 'rejected'" class="space-y-2">
+<div class="relative h-32 flex items-center justify-center"><span class="chef">👩‍🍳</span><span class="pan">🍳</span><span class="steam s1">♨️</span><span class="steam s2">♨️</span></div>
+<p class="text-lg font-extrabold text-slate-800">Golosa</p>
+<p class="text-sm text-slate-700">está preparando tu desayuno</p>
+<div class="bg-white rounded-2xl p-4 shadow-md space-y-2">
+<p class="text-xs text-slate-500" x-text="timerMsg"></p>
+<p class="text-4xl font-extrabold text-brand-700 tabular-nums" x-text="timerText"></p>
+<div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 transition-all" :style="'width:' + (100 - remainingSecs / 9) + '%'"></div></div>
+</div>
+</div>
+<p class="text-sm font-bold" :class="orderStatus === 'confirmed' ? 'text-emerald-700' : (orderStatus === 'rejected' ? 'text-rose-600' : 'text-amber-700')" x-text="orderStatus === 'confirmed' ? '✅ Pedido confirmado por la vendedora' : (orderStatus === 'rejected' ? '❌ Tu pedido fue rechazado. Puedes intentar de nuevo.' : '⏳ Esperando que la vendedora confirme tu pedido')"></p>
+<a x-show="orderSent" :href="orderSent ? waLink(orderSent) : '#'" target="_blank" class="block bg-green-500 text-white font-bold py-2.5 rounded-xl text-xs">Avisar también por WhatsApp</a>
+<button @click="showThanks = false" class="w-full bg-white border border-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs">Cerrar</button>
+</div>
+</div>
 
 <!-- ACCESO -->
 <div x-show="!role" x-cloak class="flex-1 min-h-screen bg-gradient-to-b from-brand-700 to-indigo-600 text-white p-6 flex flex-col justify-center space-y-4">
@@ -94,6 +133,9 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <button @click="logout()" class="bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">Salir</button>
 </div>
 <div class="p-4 space-y-4 flex-1">
+<button x-show="menuBuild.options.length > 0" @click="openBuild()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-2xl p-4 shadow-lg text-left active:scale-95 transition"><span class="block text-[10px] font-extrabold uppercase tracking-wider">⭐ Premium</span><span class="block font-extrabold text-base">Arma tu desayuno a tu gusto</span><span class="block text-sm font-bold" x-text="'Por ' + formatMoney(menuBuild.price) + ' · escoge tus complementos'"></span></button>
+<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu desayuno personalizado</h3>
+<template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="c.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price)"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
 <h2 class="font-bold text-slate-800">Menú</h2>
 <template x-if="menuItems.length === 0"><p class="text-xs text-slate-400 bg-slate-50 rounded-xl p-4 text-center">El menú aún no está disponible. Intenta más tarde.</p></template>
 <div class="space-y-2">
@@ -109,7 +151,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800">Total</span><strong class="text-brand-700" x-text="formatMoney(cartTotal)"></strong></div>
 <button @click="sendOrder()" :disabled="busy" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-md">🛒 Comprar</button>
 <p class="text-xs text-rose-600 text-center" x-text="orderMsg"></p>
-<template x-if="orderSent"><div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2 text-center"><p class="text-sm font-bold text-emerald-800">¡Pedido enviado! Espera la confirmación.</p><a :href="waLink(orderSent)" target="_blank" class="block bg-green-500 text-white font-bold py-2 rounded-xl text-xs">Avisar también por WhatsApp</a></div></template>
+<template x-if="orderSent"><div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2 text-center"><p class="text-sm font-bold text-emerald-800">¡Pedido enviado! Espera la confirmación.</p><button @click="showThanks = true" class="w-full bg-amber-400 text-slate-900 font-bold py-2 rounded-xl text-xs">⏱ Ver preparación de mi desayuno</button><a :href="waLink(orderSent)" target="_blank" class="block bg-green-500 text-white font-bold py-2 rounded-xl text-xs">Avisar también por WhatsApp</a></div></template>
 <template x-if="myOrders.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Mis pedidos</h3>
 <template x-for="o in myOrders.slice(0, 5)" :key="o.id"><div class="bg-white border border-slate-200 rounded-xl p-3 text-xs"><div class="flex justify-between"><strong x-text="formatMoney(o.total)"></strong><span class="font-bold" :class="o.status === 'confirmed' ? 'text-emerald-600' : (o.status === 'rejected' ? 'text-rose-600' : 'text-amber-600')" x-text="o.status === 'confirmed' ? 'Confirmado' : (o.status === 'rejected' ? 'Rechazado' : 'Pendiente')"></span></div><p class="text-slate-500" x-text="itemsText(o)"></p></div></template></div></template>
 <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1"><p class="font-bold text-slate-700">Mi cuenta</p><p x-text="cust ? 'Nombre: ' + cust.name : ''"></p><p x-text="cust ? 'Celular: ' + cust.phone : ''"></p><p x-show="cust && webauthnOk"><button @click="cust && cust.credId ? null : enableBio()" class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg" x-text="cust && cust.credId ? '👆 Huella / patrón activado' : '👆 Activar huella / patrón'"></button></p>
@@ -303,7 +345,17 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <i class="fa-solid fa-magnifying-glass text-sm mr-2"></i>
 <input type="search" x-model="dishSearch" placeholder="Buscar plato (ej: hot dog)..." class="w-full bg-transparent text-base py-2.5 focus:outline-none">
 </div>
-<button x-show="role === 'admin'" @click="publishMenu()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md">📣 Publicar menú para clientes</button>
+<div x-show="role === 'admin'" class="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+<p class="font-bold text-amber-900 text-sm">⭐ Arma tu desayuno: complementos disponibles</p>
+<div class="flex items-center space-x-2"><label class="text-xs font-bold text-slate-700 w-24">Precio (Lps)</label><input type="number" inputmode="decimal" x-model.number="build.price" @change="saveBuild()" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none"></div>
+<div class="flex space-x-2"><input type="text" x-model="newOpt.name" placeholder="Ej: Huevos revueltos" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none"><select x-model="newOpt.cat" class="text-base p-2 border border-slate-300 rounded-xl bg-white"><option>Proteína</option><option>Acompañante</option><option>Bebida</option><option>Extra</option></select></div>
+<button @click="addOpt()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-xl text-xs">＋ Agregar complemento</button>
+<div class="flex flex-wrap gap-1.5">
+<template x-for="(o, i) in build.options" :key="o.name"><span class="bg-white border border-amber-300 text-amber-900 text-[11px] px-2 py-1 rounded-lg flex items-center space-x-1"><span x-text="o.cat + ': ' + o.name"></span><button @click="removeOpt(i)" class="text-rose-600 font-bold">✕</button></span></template>
+</div>
+<p class="text-[11px] text-slate-500">Después de cambiar algo, toca "Publicar menú y complementos".</p>
+</div>
+<button x-show="role === 'admin'" @click="publishMenu()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md">📣 Publicar menú y complementos</button>
 <template x-if="dishSearch.trim() && filteredDishes.length === 0"><p class="text-center py-4 text-xs text-slate-400">No se encontró ningún plato con esa búsqueda.</p></template>
 <div class="space-y-3">
 <template x-for="dish in filteredDishes" :key="dish.id">
@@ -678,7 +730,7 @@ ingredientForm: { name: '', totalCost: 0, units: 1, unitType: 'unidades', durabi
 dishForm: { name: '', price: 0, recipe: [] },
 
 initApp() {
-this.loadStoredData();
+this.loadStoredData(); this.loadBuild();
 try { const s = localStorage.getItem('sabor_customer'); if (s) this.cust = JSON.parse(s); } catch (e) {}
 const go = () => this.fbInit();
 if (window.FB) go(); else window.addEventListener('fb-ready', go);
@@ -691,7 +743,7 @@ WA: '50494149886',
 SELLER_HASH: '495524c206230edb763905976e5aa95547e2e188141964663e397d9acdccbe34', ADMIN_HASH: 'f0f7e7adad0ca73a4a6b93620cb1767fdc062e946cf538beab9e4a2d15e189e7',
 async sha(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); },
 fbInit() {
-window.FB.watchMenu(m => { this.menuItems = m.items || []; this.menuInfo = Object.assign({ address: '' }, m.info || {}); });
+window.FB.watchMenu(m => { this.menuItems = m.items || []; this.menuInfo = Object.assign({ address: '' }, m.info || {}); this.menuBuild = m.build || { price: 60, options: [] }; });
 },
 goAuth(v) { this.authView = v; this.authPass = ''; this.authError = ''; },
 custEnter() {
@@ -711,6 +763,38 @@ try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch
 this.startCustomer();
 },
 resetPhone: '',
+build: { price: 60, options: [] }, menuBuild: { price: 60, options: [] }, newOpt: { name: '', cat: 'Proteína' },
+customCart: [], showBuild: false, buildSel: {}, buildMsg: '', showThanks: false, nowTs: Date.now(), timerId: null,
+loadBuild() { try { const b = localStorage.getItem('sabor_build'); if (b) this.build = JSON.parse(b); } catch (e) {} },
+saveBuild() { try { localStorage.setItem('sabor_build', JSON.stringify(this.build)); } catch (e) {} },
+addOpt() {
+const n = this.newOpt.name.trim();
+if (!n || this.build.options.some(o => o.name === n)) return;
+this.build.options.push({ name: n, cat: this.newOpt.cat });
+this.newOpt.name = ''; this.saveBuild();
+},
+removeOpt(i) { this.build.options.splice(i, 1); this.saveBuild(); },
+openBuild() { this.buildSel = {}; this.buildMsg = ''; this.showBuild = true; },
+get buildGroups() {
+const order = [], map = {};
+(this.menuBuild.options || []).forEach(o => { if (!map[o.cat]) { map[o.cat] = []; order.push(o.cat); } map[o.cat].push(o); });
+return order.map(c => ({ cat: c, items: map[c] }));
+},
+addBuild() {
+const sel = (this.menuBuild.options || []).filter(o => this.buildSel[o.name]).map(o => o.name);
+if (sel.length === 0) { this.buildMsg = 'Escoge al menos un complemento'; return; }
+this.customCart.push({ name: 'Desayuno a tu gusto (' + sel.join(', ') + ')', price: Number(this.menuBuild.price) || 0, qty: 1 });
+this.showBuild = false;
+},
+startThanks() {
+this.showThanks = true; this.nowTs = Date.now();
+if (this.timerId) clearInterval(this.timerId);
+this.timerId = setInterval(() => { this.nowTs = Date.now(); }, 1000);
+},
+get remainingSecs() { if (!this.orderSent) return 0; return Math.max(0, 900 - Math.floor((this.nowTs - this.orderSent.createdAt) / 1000)); },
+get timerText() { const s = this.remainingSecs; return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); },
+get timerMsg() { return this.remainingSecs > 0 ? 'Tiempo estimado de preparación' : 'Tu desayuno ya debe estar listo'; },
+get orderStatus() { if (!this.orderSent) return 'pending'; const o = this.myOrders.find(x => x.createdAt === this.orderSent.createdAt); return o ? o.status : 'pending'; },
 get webauthnOk() { return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext); },
 b64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); },
 unb64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); },
@@ -792,7 +876,7 @@ this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''
 },
 itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name).join(', '); },
 changeQty(item, d) { const q = Math.max(0, (this.cart[item.name] || 0) + d); this.cart = Object.assign({}, this.cart, { [item.name]: q }); },
-get cartItems() { return this.menuItems.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })); },
+get cartItems() { return this.menuItems.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, price: c.price, qty: c.qty }))); },
 get cartTotal() { return this.cartItems.reduce((a, i) => a + i.price * i.qty, 0); },
 async sendOrder() {
 this.orderMsg = '';
@@ -801,7 +885,7 @@ this.busy = true;
 const order = { customerName: this.cust.name, phone: this.cust.phone, items: this.cartItems, note: this.orderNote.trim(), total: this.cartTotal, status: 'pending', createdAt: Date.now() };
 try {
 await window.FB.addOrder(order);
-this.orderSent = order; this.cart = {}; this.orderNote = '';
+this.orderSent = order; this.cart = {}; this.customCart = []; this.orderNote = ''; this.startThanks();
 } catch (e) { this.orderMsg = 'No se pudo enviar. Revisa tu Internet e intenta de nuevo.'; }
 this.busy = false;
 },
@@ -840,7 +924,7 @@ const a = window.prompt('Dirección del negocio (se muestra a los clientes):', a
 if (a === null) return;
 try { localStorage.setItem('sabor_address', a); } catch (e) {}
 try {
-await window.FB.publishMenu({ items: this.dishes.map(d => ({ name: d.name, price: Number(d.price) })), info: { address: a } });
+await window.FB.publishMenu({ items: this.dishes.map(d => ({ name: d.name, price: Number(d.price) })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } });
 this.showNotification('Menú publicado para los clientes');
 } catch (e) { this.showNotification('No se pudo publicar. Revisa Internet'); }
 },
