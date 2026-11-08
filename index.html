@@ -48,11 +48,15 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div x-show="showBuild" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
 <div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
 <div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base">⭐ Arma tu desayuno</h3><button @click="showBuild = false" class="text-slate-400 text-lg">✕</button></div>
-<p class="text-xs text-slate-500" x-text="'Escoge lo que quieras. Precio: ' + formatMoney(menuBuild.price)"></p>
-<template x-for="g in buildGroups" :key="g.cat"><div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1" x-text="g.cat"></h4>
-<div class="grid grid-cols-2 gap-2"><template x-for="o in g.items" :key="o.name"><button type="button" @click="buildSel[o.name] = !buildSel[o.name]" :class="buildSel[o.name] ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left" x-text="(buildSel[o.name] ? '✔ ' : '') + o.name"></button></template></div></div></template>
+<p class="text-xs text-slate-500" x-text="'Incluye: 1 preparación de huevo + 3 complementos + acompañamiento. Precio: ' + formatMoney(buildBase)"></p>
+<div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Elige tu huevo <span class="text-rose-500">(obligatorio: 1)</span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="e in BUILD_EGGS" :key="e.name"><button type="button" @click="buildEgg = e.name" :class="buildEgg === e.name ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left" x-text="(buildEgg === e.name ? '◉ ' : '○ ') + e.name + (e.extra ? ' (+ ' + formatMoney(e.extra) + ')' : '')"></button></template></div></div>
+<div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Elige tus complementos <span class="text-rose-500" x-text="'(máximo 3) · ' + buildComps.length + '/3'"></span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="c in BUILD_COMPS" :key="c"><button type="button" @click="toggleComp(c)" :disabled="!buildComps.includes(c) && buildComps.length >= 3" :class="buildComps.includes(c) ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left disabled:opacity-40" x-text="(buildComps.includes(c) ? '✔ ' : '') + c"></button></template></div></div>
+<div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Acompañamiento <span class="text-rose-500">(obligatorio: 1)</span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="s in BUILD_SIDES" :key="s"><button type="button" @click="buildSide = s" :class="buildSide === s ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left" x-text="(buildSide === s ? '◉ ' : '○ ') + s"></button></template></div></div>
 <p class="text-xs text-rose-600 text-center" x-text="buildMsg"></p>
-<button @click="addBuild()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl" x-text="'Agregar al pedido · ' + formatMoney(menuBuild.price)"></button>
+<button @click="addBuild()" :disabled="!buildValid" :class="buildValid ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed'" class="w-full text-white font-bold py-3 rounded-xl" x-text="'Agregar al pedido • ' + formatMoney(buildPrice)"></button>
 </div>
 </div>
 
@@ -133,7 +137,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <button @click="logout()" class="bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">Salir</button>
 </div>
 <div class="p-4 space-y-4 flex-1">
-<button x-show="menuBuild.options.length > 0" @click="openBuild()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-2xl p-4 shadow-lg text-left active:scale-95 transition"><span class="block text-[10px] font-extrabold uppercase tracking-wider">⭐ Premium</span><span class="block font-extrabold text-base">Arma tu desayuno a tu gusto</span><span class="block text-sm font-bold" x-text="'Por ' + formatMoney(menuBuild.price) + ' · escoge tus complementos'"></span></button>
+<button @click="openBuild()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-2xl p-4 shadow-lg text-left active:scale-95 transition"><span class="block text-[10px] font-extrabold uppercase tracking-wider">⭐ Premium</span><span class="block font-extrabold text-base">Arma tu desayuno a tu gusto</span><span class="block text-sm font-bold" x-text="'Por ' + formatMoney(buildBase) + ' · huevo + 3 complementos + acompañamiento'"></span></button>
 <template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu desayuno personalizado</h3>
 <template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="c.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price)"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
 <h2 class="font-bold text-slate-800">Menú</h2>
@@ -346,14 +350,9 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <input type="search" x-model="dishSearch" placeholder="Buscar plato (ej: hot dog)..." class="w-full bg-transparent text-base py-2.5 focus:outline-none">
 </div>
 <div x-show="role === 'admin'" class="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
-<p class="font-bold text-amber-900 text-sm">⭐ Arma tu desayuno: complementos disponibles</p>
-<div class="flex items-center space-x-2"><label class="text-xs font-bold text-slate-700 w-24">Precio (Lps)</label><input type="number" inputmode="decimal" x-model.number="build.price" @change="saveBuild()" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none"></div>
-<div class="flex space-x-2"><input type="text" x-model="newOpt.name" placeholder="Ej: Huevos revueltos" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none"><select x-model="newOpt.cat" class="text-base p-2 border border-slate-300 rounded-xl bg-white"><option>Proteína</option><option>Acompañante</option><option>Bebida</option><option>Extra</option></select></div>
-<button @click="addOpt()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-xl text-xs">＋ Agregar complemento</button>
-<div class="flex flex-wrap gap-1.5">
-<template x-for="(o, i) in build.options" :key="o.name"><span class="bg-white border border-amber-300 text-amber-900 text-[11px] px-2 py-1 rounded-lg flex items-center space-x-1"><span x-text="o.cat + ': ' + o.name"></span><button @click="removeOpt(i)" class="text-rose-600 font-bold">✕</button></span></template>
-</div>
-<p class="text-[11px] text-slate-500">Después de cambiar algo, toca "Publicar menú y complementos".</p>
+<p class="font-bold text-amber-900 text-sm">⭐ Arma tu desayuno</p>
+<div class="flex items-center space-x-2"><label class="text-xs font-bold text-slate-700 w-24">Precio base (Lps)</label><input type="number" inputmode="decimal" x-model.number="build.price" @change="saveBuild()" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none"></div>
+<p class="text-[11px] text-slate-500">Las opciones (huevo, complementos y acompañamiento) son fijas. Huevo picado con chorizo suma Lps. 15.00. Si cambias el precio, toca "Publicar menú y complementos".</p>
 </div>
 <button x-show="role === 'admin'" @click="publishMenu()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md">📣 Publicar menú y complementos</button>
 <template x-if="dishSearch.trim() && filteredDishes.length === 0"><p class="text-center py-4 text-xs text-slate-400">No se encontró ningún plato con esa búsqueda.</p></template>
@@ -774,16 +773,28 @@ this.build.options.push({ name: n, cat: this.newOpt.cat });
 this.newOpt.name = ''; this.saveBuild();
 },
 removeOpt(i) { this.build.options.splice(i, 1); this.saveBuild(); },
-openBuild() { this.buildSel = {}; this.buildMsg = ''; this.showBuild = true; },
+BUILD_EGGS: [{ name: 'Huevo picado', extra: 0 }, { name: 'Huevo en torta', extra: 0 }, { name: 'Huevo con tomate y cebolla', extra: 0 }, { name: 'Huevo cocido', extra: 0 }, { name: 'Huevo picado con chorizo', extra: 15 }],
+BUILD_COMPS: ['Frijoles fritos', 'Frijoles parados', 'Frijoles salteados', 'Plátano maduro', 'Mantequilla', 'Queso', 'Quesillo', 'Aguacate'],
+BUILD_SIDES: ['Tortillas de maíz (2 uds.)', 'Pan blanco'],
+buildEgg: '', buildComps: [], buildSide: '',
+openBuild() { this.buildEgg = ''; this.buildComps = []; this.buildSide = ''; this.buildMsg = ''; this.showBuild = true; },
+toggleComp(c) {
+const i = this.buildComps.indexOf(c);
+if (i >= 0) { this.buildComps.splice(i, 1); this.buildMsg = ''; }
+else if (this.buildComps.length >= 3) { this.buildMsg = 'Máximo 3 complementos'; }
+else { this.buildComps.push(c); this.buildMsg = ''; }
+},
+get buildBase() { return Number(this.menuBuild && this.menuBuild.price) || 60; },
+get buildPrice() { const e = this.BUILD_EGGS.find(x => x.name === this.buildEgg); return this.buildBase + (e ? e.extra : 0); },
+get buildValid() { return !!this.buildEgg && this.buildComps.length >= 1 && this.buildComps.length <= 3 && !!this.buildSide; },
 get buildGroups() {
 const order = [], map = {};
 (this.menuBuild.options || []).forEach(o => { if (!map[o.cat]) { map[o.cat] = []; order.push(o.cat); } map[o.cat].push(o); });
 return order.map(c => ({ cat: c, items: map[c] }));
 },
 addBuild() {
-const sel = (this.menuBuild.options || []).filter(o => this.buildSel[o.name]).map(o => o.name);
-if (sel.length === 0) { this.buildMsg = 'Escoge al menos un complemento'; return; }
-this.customCart.push({ name: 'Desayuno a tu gusto (' + sel.join(', ') + ')', price: Number(this.menuBuild.price) || 0, qty: 1 });
+if (!this.buildValid) { this.buildMsg = 'Elige 1 huevo, de 1 a 3 complementos y 1 acompañamiento'; return; }
+this.customCart.push({ name: 'Desayuno a tu gusto: ' + this.buildEgg + ' · ' + this.buildComps.join(', ') + ' · ' + this.buildSide, price: this.buildPrice, qty: 1 });
 this.showBuild = false;
 },
 startThanks() {
