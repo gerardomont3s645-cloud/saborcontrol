@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>SaborControl - Control de Costos y Ventas</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{brand:{50:'#f5f3ff',100:'#ede9fe',200:'#ddd6fe',400:'#a78bfa',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',800:'#5b21b6',900:'#4c1d95'}}}}}
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+[x-cloak]{display:none!important}
+@keyframes chefBounce{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-12px) rotate(4deg)}}
+@keyframes panFlip{0%,100%{transform:rotate(-18deg)}50%{transform:rotate(22deg) translateY(-6px)}}
+@keyframes steamUp{0%{opacity:0;transform:translateY(8px)}50%{opacity:.9}100%{opacity:0;transform:translateY(-22px)}}
+.chef{display:inline-block;font-size:84px;animation:chefBounce 1s ease-in-out infinite}
+.pan{position:absolute;font-size:40px;margin:46px 0 0 74px;animation:panFlip .8s ease-in-out infinite}
+.steam{position:absolute;font-size:20px;animation:steamUp 1.6s ease-in infinite}
+.steam.s1{margin:0 0 0 96px}.steam.s2{margin:0 0 0 62px;animation-delay:.8s}
+/* Iconos con emojis (sin librería externa) */
+.fa-solid,.fa-regular{font-style:normal;display:inline-block;line-height:1}
+.fa-solid::before,.fa-regular::before{content:"•"}
+.fa-utensils::before{content:"🍴"}.fa-bolt::before{content:"⚡"}.fa-fire::before{content:"🔥"}
+.fa-plus::before{content:"＋"}.fa-plus-circle::before{content:"⊕"}.fa-brain::before{content:"🧠"}
+.fa-chart-line::before{content:"📈"}.fa-arrow-trend-up::before{content:"↗"}.fa-arrow-trend-down::before{content:"↘"}
+.fa-layer-group::before{content:"🧱"}.fa-boxes-packing::before{content:"📦"}.fa-triangle-exclamation::before{content:"⚠️"}
+.fa-pen::before{content:"✏️"}.fa-trash::before{content:"🗑️"}.fa-clock::before{content:"🕒"}
+.fa-basket-shopping::before{content:"🧺"}.fa-cash-register::before{content:"💵"}
+.fa-file-excel::before{content:"📄"}.fa-cart-shopping::before{content:"🛒"}.fa-bag-shopping::before{content:"🛍️"}
+.fa-chart-pie::before{content:"📊"}.fa-boxes-stacked::before{content:"📦"}.fa-burger::before{content:"🍔"}
+.fa-receipt::before{content:"🧾"}.fa-magnifying-glass::before{content:"🔍"}.fa-xmark::before{content:"✕"}.fa-circle-check::before{content:"✅"}
+nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7c3aed">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body class="h-full text-slate-800 flex flex-col max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white min-h-screen shadow-xl" x-data="appData()" x-init="initApp()">
+
+<!-- AVISO NUEVO PEDIDO -->
+<div x-show="newOrderBanner && (role === 'seller' || role === 'admin')" x-cloak @click="activeTab = 'orders'; newOrderBanner = null" class="fixed top-2 left-2 right-2 max-w-md mx-auto z-50 bg-amber-400 text-slate-900 font-bold text-sm rounded-xl p-3 shadow-2xl cursor-pointer">🔔 <span x-text="newOrderBanner"></span> — toca para ver</div>
+
+<!-- CHECKOUT / METODO DE PAGO -->
+<div x-show="showCheckout" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-4 max-h-[92vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base">Método de pago</h3><button @click="showCheckout = false" class="text-slate-400 text-lg">✕</button></div>
+<div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800">Total a pagar</span><strong class="text-brand-700" x-text="formatMoney(cartTotal)"></strong></div>
+<div class="grid grid-cols-2 gap-2">
+<button type="button" @click="payMethod = 'cash'" :class="payMethod === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700'" class="border-2 rounded-xl p-3 text-center font-bold text-xs"><span class="block text-3xl">💵</span>Efectivo</button>
+<button type="button" @click="payMethod = 'transfer'" :class="payMethod === 'transfer' ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-slate-200 bg-slate-50 text-slate-700'" class="border-2 rounded-xl p-3 text-center font-bold text-xs"><span class="block text-3xl">🏦</span>Transferencia bancaria</button>
+</div>
+<template x-if="payMethod === 'cash'"><div class="space-y-2">
+<label class="block text-xs font-bold text-slate-700">¿Con cuánto vas a pagar? / ¿Ocupas cambio?</label>
+<input type="number" inputmode="decimal" min="0" x-model="paidWith" placeholder="Ej: 100" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+<div class="flex flex-wrap gap-1.5"><template x-for="m in [50, 100, 200, 500]" :key="m"><button type="button" @click="paidWith = m" class="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700" x-text="'Lps. ' + m"></button></template></div>
+<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm font-bold" :class="String(paidWith) !== '' && changeDue < 0 ? 'text-rose-600' : 'text-emerald-800'" x-text="String(paidWith) === '' ? 'Escribe el monto con el que vas a pagar' : (changeDue >= 0 ? 'Tu cambio será de: ' + formatMoney(changeDue) : 'El monto no cubre el total (' + formatMoney(cartTotal) + ')')"></div>
+</div></template>
+<template x-if="payMethod === 'transfer'"><div class="space-y-3">
+<div class="bg-sky-50 border border-sky-200 rounded-xl p-3 text-xs text-slate-700 space-y-1">
+<p><strong>Titular:</strong> Junior Gerardo Montes Galindo</p>
+<p><strong>Identidad (ID):</strong> 0801-1997-139412</p>
+<p><strong>BAC:</strong> 7580-72551</p>
+<p><strong>Banco de Occidente:</strong> 21402-1227-384</p>
+<p><strong>Banpaís:</strong> 21-303-0135-227</p>
+</div>
+<label class="block w-full text-center bg-sky-600 text-white font-bold py-3 rounded-xl text-sm cursor-pointer">📎 Subir comprobante de pago<input type="file" accept="image/*,application/pdf" class="hidden" @change="pickProof($event)"></label>
+<p class="text-xs text-center" :class="proofName ? 'text-emerald-700 font-bold' : 'text-slate-400'" x-text="proofName ? '✔ ' + proofName : 'Falta subir el comprobante'"></p>
+</div></template>
+<p class="text-xs text-rose-600 text-center" x-text="checkoutMsg"></p>
+<button @click="sendOrder()" :disabled="!checkoutValid || busy" :class="checkoutValid && !busy ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed'" class="w-full text-white font-bold py-3 rounded-xl" x-text="busy ? 'Enviando...' : 'Finalizar pedido'"></button>
+</div>
+</div>
+
+<!-- HISTORIAL DE COMPRAS (CLIENTE) -->
+<div x-show="showMyOrders" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-3 max-h-[92vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base">🧾 Historial de compras</h3><button @click="showMyOrders = false" class="text-slate-400 text-lg">✕</button></div>
+<template x-if="myOrders.length === 0"><p class="text-center py-6 text-xs text-slate-400">Aún no tienes compras.</p></template>
+<template x-for="o in myOrders" :key="o.id">
+<div class="border border-slate-200 rounded-xl p-3 space-y-1 text-xs">
+<div class="flex justify-between"><span class="text-slate-500" x-text="formatDateTime(new Date(o.createdAt).toISOString())"></span><span class="font-bold" :class="o.status === 'rejected' ? 'text-rose-600' : (o.status === 'pending' ? 'text-amber-600' : 'text-emerald-600')" x-text="statusLabel(o.status)"></span></div>
+<template x-for="(it, k) in o.items" :key="k"><p class="text-slate-800" x-text="it.qty + ' x ' + it.name"></p></template>
+<p x-show="o.note" class="text-slate-500" x-text="'📝 ' + o.note"></p>
+<div class="flex justify-between pt-1 border-t border-slate-100"><span class="text-slate-500" x-text="'Pago: ' + payLabel(o)"></span><strong class="text-brand-700" x-text="formatMoney(o.total)"></strong></div>
+</div>
+</template>
+</div>
+</div>
+
+<!-- COMPROBANTE (VENDEDORA) -->
+<div x-show="showProof" x-cloak class="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-md rounded-2xl p-4 space-y-3 max-h-[92vh] overflow-y-auto">
+<div class="flex justify-between items-center"><h3 class="font-bold text-slate-800 text-sm">Comprobante de pago</h3><button @click="showProof = false" class="text-slate-400 text-lg">✕</button></div>
+<p x-show="proofView.loading" class="text-xs text-slate-400 text-center py-4">Cargando...</p>
+<p x-show="proofView.err" class="text-xs text-rose-600 text-center py-4" x-text="proofView.err"></p>
+<template x-if="proofView.data && proofView.data.indexOf('data:image') === 0"><img :src="proofView.data" class="w-full rounded-xl border border-slate-200"></template>
+<template x-if="proofView.data && proofView.data.indexOf('data:image') !== 0"><p class="text-xs text-slate-600 text-center">Archivo PDF. Descárgalo para verlo.</p></template>
+<a x-show="proofView.data" :href="proofView.data" :download="proofView.name || 'comprobante'" class="block text-center bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs">⬇ Descargar comprobante</a>
+</div>
+</div>
+
+<!-- ARMA TU DESAYUNO -->
+<div x-show="showBuild" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base">⭐ Arma tu desayuno</h3><button @click="showBuild = false" class="text-slate-400 text-lg">✕</button></div>
+<p class="text-xs text-slate-500" x-text="'Incluye: 1 preparación de huevo + 3 complementos + acompañamiento. Precio: ' + formatMoney(buildBase)"></p>
+<div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Elige tu huevo <span class="text-rose-500">(obligatorio: 1)</span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="e in BUILD_EGGS" :key="e.name"><button type="button" @click="buildEgg = e.name" :class="buildEgg === e.name ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left" x-text="(buildEgg === e.name ? '◉ ' : '○ ') + e.name + (e.extra ? ' (+ ' + formatMoney(e.extra) + ')' : '')"></button></template></div></div>
+<div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Elige tus complementos <span class="text-rose-500" x-text="'(máximo 3) · ' + buildComps.length + '/3'"></span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="c in BUILD_COMPS" :key="c"><button type="button" @click="toggleComp(c)" :disabled="!buildComps.includes(c) && buildComps.length >= 3" :class="buildComps.includes(c) ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left disabled:opacity-40" x-text="(buildComps.includes(c) ? '✔ ' : '') + c"></button></template></div></div>
+<div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Acompañamiento <span class="text-rose-500">(obligatorio: 1)</span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="s in BUILD_SIDES" :key="s"><button type="button" @click="buildSide = s" :class="buildSide === s ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left" x-text="(buildSide === s ? '◉ ' : '○ ') + s"></button></template></div></div>
+<p class="text-xs text-rose-600 text-center" x-text="buildMsg"></p>
+<button @click="addBuild()" :disabled="!buildValid" :class="buildValid ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed'" class="w-full text-white font-bold py-3 rounded-xl" x-text="'Agregar al pedido • ' + formatMoney(buildPrice)"></button>
+</div>
+</div>
+
+<!-- GRACIAS / GOLOSA -->
+<div x-show="showThanks && orderSent" x-cloak class="fixed inset-0 z-50 bg-gradient-to-b from-amber-100 to-orange-100 overflow-y-auto">
+<div class="max-w-md mx-auto p-6 text-center space-y-4 min-h-screen flex flex-col justify-center">
+<h2 class="text-2xl font-extrabold text-brand-700">¡Gracias por su compra!</h2>
+<div x-show="orderStatus !== 'rejected' && orderStatus !== 'delivered'" class="space-y-2">
+<div class="relative h-32 flex items-center justify-center"><span class="chef">👩‍🍳</span><span class="pan">🍳</span><span class="steam s1">♨️</span><span class="steam s2">♨️</span></div>
+<p class="text-lg font-extrabold text-slate-800">Golosa</p>
+<p class="text-sm text-slate-700">está preparando tu desayuno</p>
+<div class="bg-white rounded-2xl p-4 shadow-md space-y-2">
+<p class="text-xs text-slate-500" x-text="remainingSecs > 0 ? 'Tiempo estimado de entrega: ' + etaMinutes + ' minutos' : timerMsg"></p>
+<p class="text-4xl font-extrabold text-brand-700 tabular-nums" x-text="timerText"></p>
+<div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 transition-all" :style="'width:' + prepPct + '%'"></div></div>
+</div>
+</div>
+<p class="text-sm font-bold" :class="orderStatus === 'rejected' ? 'text-rose-600' : (orderStatus === 'pending' ? 'text-amber-700' : 'text-emerald-700')" x-text="orderStatus === 'confirmed' ? '✅ Pedido confirmado · en preparación' : (orderStatus === 'delivered' ? '🎉 Pedido entregado. ¡Buen provecho!' : (orderStatus === 'rejected' ? '❌ Tu pedido fue rechazado. Puedes intentar de nuevo.' : '⏳ Esperando que la vendedora confirme tu pedido'))"></p>
+<a x-show="orderSent" :href="orderSent ? waLink(orderSent) : '#'" target="_blank" class="block bg-green-500 text-white font-bold py-2.5 rounded-xl text-xs">Avisar también por WhatsApp</a>
+<button @click="showThanks = false" class="w-full bg-white border border-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs">Cerrar</button>
+</div>
+</div>
+
+<!-- ACCESO -->
+<div x-show="!role" x-cloak class="flex-1 min-h-screen bg-gradient-to-b from-brand-700 to-indigo-600 text-white p-6 flex flex-col justify-center space-y-4">
+<div class="text-center space-y-1"><div class="text-5xl">🍴</div><h1 class="text-2xl font-extrabold">SaborControl</h1><p class="text-sm text-brand-100">Desayunos &amp; Comidas Rápidas</p></div>
+<template x-if="authView === 'home'"><div class="space-y-3">
+<button @click="goAuth('custLogin')" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl shadow-md">🛒 Soy cliente</button>
+<button @click="goAuth('sellerLogin')" class="w-full bg-amber-400 text-slate-900 font-bold py-3 rounded-xl shadow-md">🧑‍🍳 Soy vendedora</button>
+<button @click="goAuth('adminLogin')" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl shadow-md">🔐 Administrador</button>
+</div></template>
+<template x-if="authView === 'custLogin'"><div class="space-y-3">
+<p class="text-sm text-center" x-text="cust ? 'Hola, ' + cust.name + '. Escribe tu clave.' : 'Primera vez: tu clave de acceso es 1234'"></p>
+<input type="password" inputmode="numeric" x-model="authPass" @keydown.enter="custEnter()" placeholder="Clave" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="custEnter()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Entrar</button>
+<button x-show="cust && cust.credId && webauthnOk" @click="bioEnter()" class="w-full bg-emerald-400 text-slate-900 font-bold py-3 rounded-xl">👆 Entrar con huella / patrón</button>
+<button x-show="cust" @click="goAuth('custReset'); resetPhone = ''; custForm.pass = ''" class="w-full text-xs text-amber-200 underline">Olvidé mi clave</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+<button @click="goAuth('home')" class="w-full text-xs text-brand-100 underline">Volver</button>
+</div></template>
+<template x-if="authView === 'custProfile'"><div class="space-y-3">
+<p class="text-sm text-center">Crea tu cuenta</p>
+<input type="text" x-model="custForm.name" placeholder="Tu nombre" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="tel" inputmode="numeric" x-model="custForm.phone" placeholder="Tu número de celular" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="password" x-model="custForm.pass" placeholder="Crea tu propia clave (mín. 4)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="custCreate()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Guardar y entrar</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+</div></template>
+<template x-if="authView === 'custReset'"><div class="space-y-3">
+<p class="text-sm text-center">Recuperar mi clave</p>
+<input type="tel" inputmode="numeric" x-model="resetPhone" placeholder="Tu celular registrado" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="password" x-model="custForm.pass" placeholder="Nueva clave (mín. 4)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="resetPass()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Guardar nueva clave y entrar</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+<button @click="goAuth('custLogin')" class="w-full text-xs text-brand-100 underline">Volver</button>
+</div></template>
+<template x-if="authView === 'sellerLogin'"><div class="space-y-3">
+<p class="text-sm text-center">Acceso de vendedoras</p>
+<input type="text" x-model="authName" placeholder="Tu nombre" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="password" x-model="authPass" @keydown.enter="sellerEnter()" placeholder="Clave" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="sellerEnter()" class="w-full bg-amber-400 text-slate-900 font-bold py-3 rounded-xl">Entrar</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+<button @click="goAuth('home')" class="w-full text-xs text-brand-100 underline">Volver</button>
+</div></template>
+<template x-if="authView === 'adminLogin'"><div class="space-y-3">
+<p class="text-sm text-center">Acceso de administrador</p>
+<input type="password" x-model="authPass" @keydown.enter="adminEnter()" placeholder="Clave" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="adminEnter()" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl">Entrar</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+<button @click="goAuth('home')" class="w-full text-xs text-brand-100 underline">Volver</button>
+</div></template>
+</div>
+
+<!-- CLIENTE -->
+<div x-show="role === 'customer'" x-cloak class="flex-1 flex flex-col">
+<div class="bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white p-4 flex justify-between items-center sticky top-0 z-30">
+<div><h1 class="font-extrabold text-lg">🍴 SaborControl</h1><p class="text-xs text-brand-100" x-text="cust ? 'Hola, ' + cust.name : ''"></p></div>
+<button @click="logout()" class="bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">Salir</button>
+</div>
+<div class="p-4 space-y-4 flex-1">
+<button @click="showMyOrders = true" class="w-full bg-white border border-brand-200 text-brand-700 font-bold py-2.5 rounded-xl text-sm shadow-sm">🧾 Historial de compras</button>
+<button @click="openBuild()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-2xl p-4 shadow-lg text-left active:scale-95 transition"><span class="block text-[10px] font-extrabold uppercase tracking-wider">⭐ Premium</span><span class="block font-extrabold text-base">Arma tu desayuno a tu gusto</span><span class="block text-sm font-bold" x-text="'Por ' + formatMoney(buildBase) + ' · huevo + 3 complementos + acompañamiento'"></span></button>
+<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu desayuno personalizado</h3>
+<template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="c.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price)"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
+<h2 class="font-bold text-slate-800">Menú</h2>
+<template x-if="menuItems.length === 0"><p class="text-xs text-slate-400 bg-slate-50 rounded-xl p-4 text-center">El menú aún no está disponible. Intenta más tarde.</p></template>
+<div class="space-y-2">
+<template x-for="item in menuItems" :key="item.name">
+<div class="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+<div class="min-w-0 mr-2"><p class="font-bold text-sm truncate" x-text="item.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(item.price)"></p></div>
+<div class="flex items-center space-x-2"><button @click="changeQty(item, -1)" class="w-8 h-8 rounded-lg bg-slate-100 font-bold">−</button><span class="w-6 text-center font-bold text-sm" x-text="cart[item.name] || 0"></span><button @click="changeQty(item, 1)" class="w-8 h-8 rounded-lg bg-brand-600 text-white font-bold">+</button></div>
+</div>
+</template>
+</div>
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Desayunos y complementos: escribe cómo lo quieres</label>
+<textarea x-model="orderNote" rows="3" placeholder="Ej: Desayuno completo con huevos revueltos, sin plátano" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea></div>
+<div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800">Total</span><strong class="text-brand-700" x-text="formatMoney(cartTotal)"></strong></div>
+<button @click="openCheckout()" :disabled="busy" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-md">🛒 Confirmar compra</button>
+<p class="text-xs text-rose-600 text-center" x-text="orderMsg"></p>
+<template x-if="orderSent"><div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2 text-center"><p class="text-sm font-bold text-emerald-800">¡Pedido enviado! Espera la confirmación.</p><button @click="showThanks = true" class="w-full bg-amber-400 text-slate-900 font-bold py-2 rounded-xl text-xs">⏱ Ver preparación de mi desayuno</button><a :href="waLink(orderSent)" target="_blank" class="block bg-green-500 text-white font-bold py-2 rounded-xl text-xs">Avisar también por WhatsApp</a></div></template>
+<template x-if="myOrders.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Mis pedidos</h3>
+<template x-for="o in myOrders.slice(0, 5)" :key="o.id"><div class="bg-white border border-slate-200 rounded-xl p-3 text-xs"><div class="flex justify-between"><strong x-text="formatMoney(o.total)"></strong><span class="font-bold" :class="o.status === 'confirmed' ? 'text-emerald-600' : (o.status === 'rejected' ? 'text-rose-600' : 'text-amber-600')" x-text="statusLabel(o.status)"></span></div><p class="text-slate-500" x-text="itemsText(o)"></p></div></template></div></template>
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1"><p class="font-bold text-slate-700">Mi cuenta</p><p x-text="cust ? 'Nombre: ' + cust.name : ''"></p><p x-text="cust ? 'Celular: ' + cust.phone : ''"></p><p x-show="cust && webauthnOk"><button @click="cust && cust.credId ? null : enableBio()" class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg" x-text="cust && cust.credId ? '👆 Huella / patrón activado' : '👆 Activar huella / patrón'"></button></p>
+<p><button @click="showCustPass = !showCustPass" class="text-brand-600 underline" x-text="showCustPass ? 'Ocultar clave' : 'Ver mi clave'"></button> <strong x-show="showCustPass" x-text="cust ? cust.pass : ''"></strong></p></div>
+</div>
+<div class="bg-slate-900 text-white p-4 text-xs text-center space-y-1"><p x-text="'📍 ' + (menuInfo.address || 'Dirección por confirmar')"></p><p>📞 +504 9414-9886</p></div>
+</div>
+
+<header x-show="role === 'seller' || role === 'admin'" x-cloak class="bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white p-4 sticky top-0 z-30 shadow-md">
+<div class="flex justify-between items-center">
+<div class="flex items-center space-x-2">
+<div class="bg-white/20 p-2 rounded-xl"><i class="fa-solid fa-utensils text-xl"></i></div>
+<div>
+<h1 class="font-extrabold text-lg leading-tight tracking-wide">SaborControl</h1>
+<p class="text-xs text-brand-100 flex items-center gap-1">Desayunos &amp; Comidas Rápidas <span class="inline-block w-2 h-2 rounded-full bg-emerald-400" title="Guardado local activo"></span></p>
+</div>
+</div>
+<div class="flex items-center space-x-2"><button @click="logout()" class="bg-white/20 text-white px-2 h-9 rounded-lg text-xs font-bold">Salir</button><button @click="openSearch()" aria-label="Buscar" class="bg-white/20 hover:bg-white/30 text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-md active:scale-95 transition"><i class="fa-solid fa-magnifying-glass text-base"></i></button>
+<button @click="openQuickSaleModal()" class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center shadow-md active:scale-95 transition"><i class="fa-solid fa-bolt mr-1 text-sm"></i> Venta Rápida</button></div>
+</div>
+</header>
+
+<main x-show="role === 'seller' || role === 'admin'" x-cloak class="flex-1 overflow-y-auto pb-28 p-4 space-y-5">
+
+<!-- DASHBOARD -->
+<div x-show="activeTab === 'dashboard'" x-cloak class="space-y-5">
+<div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
+<div class="flex justify-between items-center mb-3">
+<span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Resumen de Hoy</span>
+<span class="text-xs bg-brand-500/30 text-brand-200 px-2.5 py-0.5 rounded-full border border-brand-400/20" x-text="todayDateFormatted()"></span>
+</div>
+<div class="grid grid-cols-3 gap-2 text-center">
+<div class="bg-white/5 p-2.5 rounded-xl border border-white/5"><p class="text-[10px] uppercase text-emerald-400 font-bold">Ventas</p><p class="text-base font-extrabold text-emerald-300" x-text="formatMoney(todayStats.sales)"></p></div>
+<div class="bg-white/5 p-2.5 rounded-xl border border-white/5"><p class="text-[10px] uppercase text-rose-400 font-bold">Gastos</p><p class="text-base font-extrabold text-rose-300" x-text="formatMoney(todayStats.expenses)"></p></div>
+<div class="bg-white/5 p-2.5 rounded-xl border border-white/5"><p class="text-[10px] uppercase text-amber-400 font-bold">Ganancia Neta</p><p class="text-base font-extrabold" :class="todayStats.netProfit >= 0 ? 'text-amber-300' : 'text-rose-400'" x-text="formatMoney(todayStats.netProfit)"></p></div>
+</div>
+</div>
+
+<div class="grid grid-cols-2 gap-2.5">
+<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center"><p class="text-[10px] uppercase text-emerald-700 font-bold">Unidades vendidas hoy</p><p class="text-lg font-extrabold text-emerald-700" x-text="todayExtra.units"></p></div>
+<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p class="text-[10px] uppercase text-amber-700 font-bold">Ganancia de recetas hoy</p><p class="text-lg font-extrabold text-amber-700" x-text="formatMoney(todayExtra.profit)"></p></div>
+</div>
+
+<div>
+<h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center"><i class="fa-solid fa-fire mr-1.5"></i> Platos Populares (Venta Rápida)</h3>
+<div class="grid grid-cols-2 gap-2.5">
+<template x-for="dish in dishes.slice(0, 4)" :key="dish.id">
+<button @click="quickSell(dish)" class="bg-white border border-slate-200 hover:border-brand-400 p-3 rounded-xl flex items-center justify-between shadow-sm active:bg-brand-50 transition text-left group">
+<div class="truncate mr-2"><p class="font-bold text-slate-800 text-sm truncate" x-text="dish.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(dish.price)"></p></div>
+<span class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-plus text-xs"></i></span>
+</button>
+</template>
+</div>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+<div class="flex items-center justify-between">
+<h2 class="font-bold text-slate-800 text-sm flex items-center"><i class="fa-solid fa-cash-register mr-1.5"></i> Ventas y ganancia por producto</h2>
+</div>
+<div class="flex space-x-1 bg-slate-200/60 p-1 rounded-xl text-xs font-medium">
+<button @click="prodFilter = 'today'" :class="prodFilter === 'today' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Hoy</button>
+<button @click="prodFilter = 'week'" :class="prodFilter === 'week' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Semana</button>
+<button @click="prodFilter = 'month'" :class="prodFilter === 'month' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Mes</button>
+<button @click="prodFilter = 'all'" :class="prodFilter === 'all' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Todos</button>
+</div>
+<div class="space-y-2">
+<template x-for="p in salesByProduct" :key="p.name">
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+<div class="flex justify-between items-center mb-1.5">
+<span class="font-bold text-slate-800 text-sm" x-text="p.name"></span>
+<span class="text-[11px] font-bold bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full" x-text="p.units + ' vendido(s)'"></span>
+</div>
+<div class="grid grid-cols-2 gap-2 text-center">
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Vendido</span><span class="text-xs font-bold text-slate-700" x-text="formatMoney(p.total)"></span></div>
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Ganancia</span><span class="text-xs font-extrabold" :class="p.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'" x-text="formatMoney(p.profit)"></span></div>
+</div>
+</div>
+</template>
+<template x-if="salesByProduct.length === 0"><p class="text-center py-4 text-xs text-slate-400">No hay ventas en este periodo.</p></template>
+</div>
+<template x-if="salesByProduct.length > 0">
+<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 grid grid-cols-3 gap-2 text-center">
+<div><span class="text-[10px] text-emerald-700 uppercase font-bold block">Unidades</span><span class="text-xs font-extrabold text-emerald-800" x-text="salesByProductTotals.units"></span></div>
+<div><span class="text-[10px] text-emerald-700 uppercase font-bold block">Vendido</span><span class="text-xs font-extrabold text-emerald-800" x-text="formatMoney(salesByProductTotals.total)"></span></div>
+<div><span class="text-[10px] text-emerald-700 uppercase font-bold block">Ganancia</span><span class="text-xs font-extrabold text-emerald-800" x-text="formatMoney(salesByProductTotals.profit)"></span></div>
+</div>
+</template>
+<p class="text-[10px] text-slate-400">Ganancia = precio de venta menos el costo de los insumos de la receta.</p>
+</div>
+
+<div class="bg-gradient-to-br from-brand-50 to-indigo-50 border border-brand-100 rounded-2xl p-4 shadow-sm space-y-4">
+<div class="flex items-center space-x-2 border-b border-brand-200/60 pb-2">
+<div class="bg-brand-600 text-white p-1.5 rounded-lg text-xs"><i class="fa-solid fa-brain"></i></div>
+<h2 class="font-bold text-slate-800 text-sm">Diagnóstico Inteligente del Negocio</h2>
+</div>
+
+<div class="bg-white p-3 rounded-xl border border-slate-200/80 space-y-2">
+<div class="flex justify-between items-center">
+<span class="text-xs font-bold text-slate-700 flex items-center"><i class="fa-solid fa-chart-line mr-1.5"></i> Margen Promedio</span>
+<span class="text-xs font-extrabold px-2 py-0.5 rounded-full" :class="avgMargin >= 40 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" x-text="avgMargin + '%'"></span>
+</div>
+<p class="text-xs text-slate-600" x-text="diagnosticProfitText()"></p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div class="bg-white p-3 rounded-xl border border-slate-200/80">
+<span class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider block mb-1"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Plato Más Rentable</span>
+<template x-if="mostProfitableDish"><div>
+<p class="font-bold text-slate-800 text-sm" x-text="mostProfitableDish.name"></p>
+<div class="flex justify-between text-xs text-slate-500 mt-1"><span>Ganancia: <strong class="text-emerald-600" x-text="formatMoney(mostProfitableDish.price - calculateDishCost(mostProfitableDish))"></strong></span><span class="font-bold text-emerald-700" x-text="calculateDishMargin(mostProfitableDish) + '%'"></span></div>
+</div></template>
+<template x-if="!mostProfitableDish"><p class="text-xs text-slate-400">Registra platos para analizar.</p></template>
+</div>
+<div class="bg-white p-3 rounded-xl border border-slate-200/80">
+<span class="text-[11px] font-bold text-rose-600 uppercase tracking-wider block mb-1"><i class="fa-solid fa-arrow-trend-down mr-1"></i> Plato Menos Rentable</span>
+<template x-if="leastProfitableDish"><div>
+<p class="font-bold text-slate-800 text-sm" x-text="leastProfitableDish.name"></p>
+<div class="flex justify-between text-xs text-slate-500 mt-1"><span>Ganancia: <strong class="text-slate-700" x-text="formatMoney(leastProfitableDish.price - calculateDishCost(leastProfitableDish))"></strong></span><span class="font-bold text-rose-600" x-text="calculateDishMargin(leastProfitableDish) + '%'"></span></div>
+</div></template>
+<template x-if="!leastProfitableDish"><p class="text-xs text-slate-400">Sin suficientes datos.</p></template>
+</div>
+</div>
+
+<div class="bg-white p-3 rounded-xl border border-slate-200/80 space-y-3">
+<div>
+<h4 class="text-xs font-bold text-slate-700 mb-1.5 flex items-center"><i class="fa-solid fa-layer-group mr-1.5"></i> Top 3 Insumos Más Usados en Menú</h4>
+<div class="flex flex-wrap gap-1.5">
+<template x-for="item in topUsedIngredients" :key="item.id"><span class="bg-brand-50 text-brand-700 border border-brand-200 px-2 py-1 rounded-lg text-xs font-medium" x-text="item.name + ' (' + item.count + ' platos)'"></span></template>
+</div>
+</div>
+<div class="border-t border-slate-100 pt-2">
+<h4 class="text-xs font-bold text-slate-700 mb-1.5 flex items-center"><i class="fa-solid fa-boxes-packing mr-1.5"></i> Insumos Menos Usados</h4>
+<div class="flex flex-wrap gap-1.5">
+<template x-for="item in leastUsedIngredients" :key="item.id"><span class="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-1 rounded-lg text-xs font-medium" x-text="item.name"></span></template>
+</div>
+</div>
+</div>
+
+<div class="bg-amber-50/70 border border-amber-200 p-3 rounded-xl space-y-2">
+<span class="text-xs font-bold text-amber-800 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Alertas de Duración e Inventario</span>
+<ul class="text-xs text-amber-900 space-y-1">
+<template x-for="alert in inventoryAlerts" :key="alert.id">
+<li class="flex justify-between items-center bg-white/60 p-1.5 rounded border border-amber-200/50"><span class="font-medium" x-text="alert.name"></span><span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-200 text-amber-800" x-text="alert.status"></span></li>
+</template>
+<template x-if="inventoryAlerts.length === 0"><li class="text-slate-500 italic">Todos tus insumos parecen estar dentro del tiempo estimado de frescura.</li></template>
+</ul>
+</div>
+</div>
+</div>
+
+<!-- INSUMOS -->
+<div x-show="activeTab === 'ingredients'" x-cloak class="space-y-4">
+<div class="flex justify-between items-center">
+<div><h2 class="font-bold text-slate-800 text-base">Inventario de Insumos</h2><p class="text-xs text-slate-500">Registra tus compras y calcula el costo unitario</p></div>
+<button x-show="role === 'admin'" @click="openIngredientModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center shadow-md"><i class="fa-solid fa-plus mr-1"></i> Nuevo Insumo</button>
+</div>
+<div class="space-y-3">
+<template x-for="item in ingredients" :key="item.id">
+<div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm">
+<div class="flex justify-between items-start mb-2">
+<div><h3 class="font-bold text-slate-800 text-sm" x-text="item.name"></h3><p class="text-xs text-slate-500" x-text="'Comprado: ' + formatDate(item.purchaseDate)"></p></div>
+<div class="flex space-x-1">
+<button @click="editIngredient(item)" class="text-slate-400 hover:text-brand-600 p-1 rounded-md text-xs"><i class="fa-solid fa-pen"></i></button>
+<button @click="deleteIngredient(item.id)" class="text-slate-400 hover:text-rose-600 p-1 rounded-md text-xs"><i class="fa-solid fa-trash"></i></button>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Costo Total</span><span class="text-xs font-bold text-slate-700" x-text="formatMoney(item.totalCost)"></span></div>
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Rendimiento</span><span class="text-xs font-bold text-slate-700" x-text="item.units + ' ' + item.unitType"></span></div>
+<div class="bg-brand-50 rounded-lg p-0.5 border border-brand-100"><span class="text-[10px] text-brand-700 uppercase font-bold block">Costo Unitario</span><span class="text-xs font-extrabold text-brand-700" x-text="formatMoney(item.totalCost / item.units) + ' / ' + item.unitType"></span></div>
+</div>
+<div class="mt-2.5 flex justify-between items-center text-xs">
+<span class="text-slate-500"><i class="fa-regular fa-clock mr-1"></i> Duración: <strong class="text-slate-700" x-text="item.durabilityDays + ' días'"></strong></span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="getDaysRemaining(item) <= 1 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'" x-text="getDaysRemaining(item) <= 0 ? 'Vencimiento cercano' : 'Aprox. ' + getDaysRemaining(item) + ' días restantes'"></span>
+</div>
+</div>
+</template>
+<template x-if="ingredients.length === 0">
+<div class="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-300"><i class="fa-solid fa-basket-shopping text-3xl mb-2"></i><p class="text-sm font-semibold text-slate-600">No hay insumos registrados</p><p class="text-xs text-slate-400">Agrega productos para calcular el costo de tus platos</p></div>
+</template>
+</div>
+</div>
+
+<!-- PLATOS -->
+<div x-show="activeTab === 'dishes'" x-cloak class="space-y-4">
+<div class="flex justify-between items-center">
+<div><h2 class="font-bold text-slate-800 text-base">Menú y Recetas</h2><p class="text-xs text-slate-500">Calcula costos exactos y define precios de venta</p></div>
+<button x-show="role === 'admin'" @click="openDishModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center shadow-md"><i class="fa-solid fa-plus mr-1"></i> Nuevo Plato</button>
+</div>
+<div class="flex items-center bg-slate-100 rounded-xl px-3 border border-slate-200 focus-within:ring-2 focus-within:ring-brand-500">
+<i class="fa-solid fa-magnifying-glass text-sm mr-2"></i>
+<input type="search" x-model="dishSearch" placeholder="Buscar plato (ej: hot dog)..." class="w-full bg-transparent text-base py-2.5 focus:outline-none">
+</div>
+<div x-show="role === 'admin'" class="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+<p class="font-bold text-amber-900 text-sm">⭐ Arma tu desayuno</p>
+<div class="flex items-center space-x-2"><label class="text-xs font-bold text-slate-700 w-24">Precio base (Lps)</label><input type="number" inputmode="decimal" x-model.number="build.price" @change="saveBuild()" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none"></div>
+<p class="text-[11px] text-slate-500">Las opciones (huevo, complementos y acompañamiento) son fijas. Huevo picado con chorizo suma Lps. 15.00. Si cambias el precio, toca "Publicar menú y complementos".</p>
+</div>
+<button x-show="role === 'admin'" @click="publishMenu()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md">📣 Publicar menú y complementos</button>
+<template x-if="dishSearch.trim() && filteredDishes.length === 0"><p class="text-center py-4 text-xs text-slate-400">No se encontró ningún plato con esa búsqueda.</p></template>
+<div class="space-y-3">
+<template x-for="dish in filteredDishes" :key="dish.id">
+<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+<div class="flex justify-between items-start mb-2">
+<div><h3 @click="openSellModal(dish)" class="font-bold text-slate-800 text-base cursor-pointer" x-text="dish.name"></h3><span class="text-xs text-slate-500">Precio Venta: <strong class="text-slate-800" x-text="formatMoney(dish.price)"></strong></span></div>
+<div class="flex space-x-1">
+<button @click="openSellModal(dish)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center mr-1"><i class="fa-solid fa-cash-register mr-1"></i> Vender</button>
+<button x-show="role === 'admin'" @click="editDish(dish)" class="text-slate-400 hover:text-brand-600 p-1 text-xs"><i class="fa-solid fa-pen"></i></button>
+<button x-show="role === 'admin'" @click="deleteDish(dish.id)" class="text-slate-400 hover:text-rose-600 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>
+</div>
+</div>
+<div class="my-2.5 flex flex-wrap gap-1">
+<template x-for="recipeItem in dish.recipe" :key="recipeItem.ingredientId"><span class="bg-slate-100 border border-slate-200 text-slate-700 text-[11px] px-2 py-0.5 rounded-md" x-text="getIngredientName(recipeItem.ingredientId) + ' (' + recipeItem.portion + ')'"></span></template>
+</div>
+<div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100 mt-2">
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Costo Receta</span><span class="text-xs font-bold text-rose-600" x-text="formatMoney(calculateDishCost(dish))"></span></div>
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Ganancia Plato</span><span class="text-xs font-bold text-emerald-600" x-text="formatMoney(dish.price - calculateDishCost(dish))"></span></div>
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Margen %</span><span class="text-xs font-extrabold px-2 py-0.5 rounded-full inline-block" :class="calculateDishMargin(dish) >= 40 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" x-text="calculateDishMargin(dish) + '%'"></span></div>
+</div>
+</div>
+</template>
+<template x-if="dishes.length === 0">
+<div class="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-300"><i class="fa-solid fa-utensils text-3xl mb-2"></i><p class="text-sm font-semibold text-slate-600">No hay platos registrados</p><p class="text-xs text-slate-400">Crea tus recetas para saber cuánto ganas en cada venta</p></div>
+</template>
+</div>
+</div>
+
+<!-- PEDIDOS EN LINEA -->
+<div x-show="activeTab === 'orders'" x-cloak class="space-y-4">
+<div><h2 class="font-bold text-slate-800 text-base">Pedidos en línea</h2><p class="text-xs text-slate-500">Pedidos nuevos de clientes por confirmar</p></div>
+<template x-if="pendingOrders.length === 0"><p class="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-300">No hay pedidos pendientes.</p></template>
+<template x-for="o in pendingOrders" :key="o.id">
+<div class="bg-amber-50 border border-amber-300 rounded-2xl p-4 space-y-2">
+<div class="flex justify-between items-start"><div><p class="font-bold text-slate-800 text-sm" x-text="o.customerName"></p><p class="text-xs text-slate-500" x-text="'📞 ' + o.phone + ' · ' + formatDateTime(new Date(o.createdAt).toISOString())"></p></div><span class="font-extrabold text-brand-700 text-sm" x-text="formatMoney(o.total)"></span></div>
+<p class="text-xs text-slate-700" x-text="itemsText(o)"></p>
+<p x-show="o.note" class="text-xs bg-white border border-amber-200 rounded-lg p-2 text-slate-700" x-text="'📝 ' + o.note"></p>
+<template x-if="o.payMethod === 'cash'"><div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs"><span class="font-bold text-emerald-800">💵 Pago en Efectivo</span><br><span x-text="'Llevar cambio de: ' + formatMoney(o.change) + ' (Paga con: ' + formatMoney(o.paidWith) + ')'"></span></div></template>
+<template x-if="o.payMethod === 'transfer'"><div class="bg-sky-50 border border-sky-200 rounded-lg p-2 text-xs space-y-1.5"><span class="font-bold text-sky-800">🏦 Pago por Transferencia</span><div class="flex space-x-2"><button @click="viewProof(o)" class="flex-1 bg-white border border-sky-300 text-sky-700 font-bold py-1.5 rounded-lg">👁 Ver comprobante</button><button @click="markPaid(o)" :disabled="o.paid" :class="o.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-600 text-white'" class="flex-1 font-bold py-1.5 rounded-lg" x-text="o.paid ? '✔ Pago recibido' : 'Confirmar pago recibido'"></button></div></div></template>
+<template x-if="!o.payMethod"><p class="text-[11px] text-slate-400">Método de pago no indicado</p></template>
+<div class="flex items-center space-x-2"><label class="text-[11px] font-bold text-slate-600">Minutos</label><input type="number" inputmode="numeric" min="1" :value="o.prepMinutes || 15" @input="etaInputs[o.id] = $event.target.value" class="w-16 text-base p-1.5 border border-slate-300 rounded-lg text-center"><button @click="updateEta(o)" class="flex-1 bg-brand-600 text-white font-bold py-1.5 rounded-lg text-xs">Actualizar tiempo</button></div>
+<div class="flex space-x-2 pt-1"><button @click="confirmOrder(o)" :disabled="o.payMethod === 'transfer' && !o.paid" class="flex-1 bg-emerald-600 disabled:opacity-40 text-white font-bold py-2 rounded-xl text-xs">✔ Confirmar</button><button @click="rejectOrder(o)" class="flex-1 bg-rose-100 text-rose-700 font-bold py-2 rounded-xl text-xs">✖ Rechazar</button></div>
+</div>
+</template>
+<div><h2 class="font-bold text-slate-800 text-base">Vendiendo en línea (hoy)</h2></div>
+<template x-if="confirmedToday.length === 0"><p class="text-center py-4 text-xs text-slate-400">Aún no hay pedidos confirmados hoy.</p></template>
+<template x-for="o in confirmedToday" :key="o.id">
+<div class="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+<div class="flex justify-between items-start"><div><p class="font-bold text-slate-800 text-xs" x-text="o.customerName"></p><p class="text-[11px] text-slate-500" x-text="itemsText(o)"></p><p class="text-[10px] text-slate-400" x-text="payLabel(o) + ' · ' + statusLabel(o.status)"></p></div><span class="font-extrabold text-emerald-600 text-xs" x-text="'+ ' + formatMoney(o.total)"></span></div>
+<template x-if="o.status === 'confirmed'"><div class="space-y-2">
+<div class="flex items-center space-x-2"><label class="text-[11px] font-bold text-slate-600">Minutos</label><input type="number" inputmode="numeric" min="1" :value="o.prepMinutes || 15" @input="etaInputs[o.id] = $event.target.value" class="w-16 text-base p-1.5 border border-slate-300 rounded-lg text-center"><button @click="updateEta(o)" class="flex-1 bg-brand-600 text-white font-bold py-1.5 rounded-lg text-xs">Actualizar tiempo</button></div>
+<button @click="markDelivered(o)" class="w-full bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-xs">📦 Marcar entregado</button>
+</div></template>
+</div>
+</template>
+<div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-1.5 text-xs">
+<p class="font-bold text-emerald-800 text-sm">Cantidad a liquidar hoy</p>
+<div class="flex justify-between text-slate-600"><span>Ventas de mostrador</span><strong x-text="formatMoney(liquidation.counter)"></strong></div>
+<div class="flex justify-between text-slate-600"><span>Pedidos en línea confirmados</span><strong x-text="formatMoney(liquidation.online)"></strong></div>
+<div class="flex justify-between text-emerald-800 text-sm border-t border-emerald-200 pt-1.5"><span class="font-bold">Total a liquidar</span><strong x-text="formatMoney(liquidation.total)"></strong></div>
+</div>
+</div>
+
+<!-- HISTORIAL -->
+<div x-show="activeTab === 'history'" x-cloak class="space-y-4">
+<div class="flex justify-between items-center">
+<div><h2 class="font-bold text-slate-800 text-base">Historial de Transacciones</h2><p class="text-xs text-slate-500">Registro detallado de ventas y compras</p></div>
+<button x-show="role === 'admin'" @click="exportToCSV()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center shadow-md"><i class="fa-solid fa-file-excel mr-1"></i> Exportar CSV</button>
+</div>
+<div class="flex space-x-1 bg-slate-200/60 p-1 rounded-xl text-xs font-medium">
+<button @click="historyFilter = 'today'" :class="historyFilter === 'today' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Hoy</button>
+<button @click="historyFilter = 'week'" :class="historyFilter === 'week' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Esta Semana</button>
+<button @click="historyFilter = 'month'" :class="historyFilter === 'month' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Este Mes</button>
+<button @click="historyFilter = 'all'" :class="historyFilter === 'all' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Todos</button>
+</div>
+<div class="space-y-2">
+<template x-for="log in filteredHistory" :key="log.id">
+<div class="bg-white border border-slate-200 p-3 rounded-xl flex justify-between items-center">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" :class="log.type === 'sale' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"><i class="fa-solid" :class="log.type === 'sale' ? 'fa-cart-shopping' : 'fa-bag-shopping'"></i></div>
+<div><p class="font-bold text-slate-800 text-xs" x-text="log.description"></p><p class="text-[10px] text-slate-400" x-text="formatDateTime(log.date)"></p></div>
+</div>
+<div class="text-right">
+<span class="font-extrabold text-xs block" :class="log.type === 'sale' ? 'text-emerald-600' : 'text-rose-600'" x-text="(log.type === 'sale' ? '+ ' : '- ') + formatMoney(log.amount)"></span>
+<button x-show="role === 'admin'" @click="deleteHistoryItem(log.id)" class="text-[10px] text-slate-300 hover:text-rose-500">Eliminar</button>
+</div>
+</div>
+</template>
+<template x-if="filteredHistory.length === 0"><p class="text-center py-6 text-xs text-slate-400">No hay movimientos en este periodo.</p></template>
+</div>
+</div>
+
+</main>
+
+<nav x-show="role === 'seller' || role === 'admin'" x-cloak class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
+<button @click="activeTab = 'orders'" :class="activeTab === 'orders' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="relative flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🔔</span><span>Pedidos</span><span x-show="pendingOrders.length > 0" class="absolute -top-0.5 right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full px-1.5" x-text="pendingOrders.length"></span></button>
+<button x-show="role === 'admin'" @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-chart-pie text-lg mb-0.5"></i><span>Diagnóstico</span></button>
+<button x-show="role === 'admin'" @click="activeTab = 'ingredients'" :class="activeTab === 'ingredients' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-boxes-stacked text-lg mb-0.5"></i><span>Insumos</span></button>
+<button @click="activeTab = 'dishes'" :class="activeTab === 'dishes' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-burger text-lg mb-0.5"></i><span>Menú / Platos</span></button>
+<button @click="activeTab = 'history'" :class="activeTab === 'history' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-receipt text-lg mb-0.5"></i><span>Historial</span></button>
+</nav>
+
+<!-- MODAL INSUMO -->
+<div x-show="showIngredientModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2">
+<h3 class="font-bold text-slate-800 text-base" x-text="editingIngredientId ? 'Editar Insumo' : 'Registrar Compra / Insumo'"></h3>
+<button @click="showIngredientModal = false" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark text-lg"></i></button>
+</div>
+<form @submit.prevent="saveIngredient()" class="space-y-3">
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Nombre del Insumo / Producto</label>
+<input type="text" x-model="ingredientForm.name" required placeholder="Ej: Cartón de Huevos, Medida de Frijoles" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+<div class="grid grid-cols-2 gap-2">
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Costo Total (Lps)</label>
+<input type="number" inputmode="decimal" step="0.01" x-model.number="ingredientForm.totalCost" required placeholder="155.00" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Rendimiento / Unidades</label>
+<input type="number" inputmode="decimal" step="0.1" x-model.number="ingredientForm.units" required placeholder="30" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Medida</label>
+<select x-model="ingredientForm.unitType" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white">
+<option value="unidades">Unidades / Piezas</option><option value="libras">Libras (lbs)</option><option value="porciones">Porciones</option><option value="paquetes">Paquete</option><option value="litros">Litros / Galones</option>
+</select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Duración Estimada (Días)</label>
+<input type="number" inputmode="numeric" x-model.number="ingredientForm.durabilityDays" required placeholder="7" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+</div>
+<div class="bg-brand-50 p-2.5 rounded-xl border border-brand-100 text-xs text-brand-800"><span>Costo Unitario Calculado: </span><strong x-text="formatMoney(ingredientForm.units > 0 ? ingredientForm.totalCost / ingredientForm.units : 0) + ' por ' + ingredientForm.unitType"></strong></div>
+<div class="flex justify-end space-x-2 pt-2 border-t">
+<button type="button" @click="showIngredientModal = false" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
+<button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md">Guardar Insumo</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- MODAL PLATO -->
+<div x-show="showDishModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2">
+<h3 class="font-bold text-slate-800 text-base" x-text="editingDishId ? 'Editar Plato' : 'Nuevo Plato / Receta'"></h3>
+<button @click="showDishModal = false" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark text-lg"></i></button>
+</div>
+<form @submit.prevent="saveDish()" class="space-y-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Nombre del Plato</label>
+<input type="text" x-model="dishForm.name" required placeholder="Ej: Desayuno Completo, Baleada Especial" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Precio de Venta al Cliente (Lps)</label>
+<input type="number" inputmode="decimal" step="0.01" x-model.number="dishForm.price" required placeholder="40.00" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+<div class="border-t pt-3">
+<div class="flex justify-between items-center mb-2">
+<label class="block text-xs font-bold text-slate-700">Ingredientes de la Receta</label>
+<button type="button" @click="addRecipeRow()" class="text-xs text-brand-600 hover:text-brand-800 font-bold flex items-center"><i class="fa-solid fa-plus-circle mr-1"></i> Agregar Insumo</button>
+</div>
+<div class="space-y-2">
+<template x-for="(row, index) in dishForm.recipe" :key="index">
+<div class="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+<select x-model="row.ingredientId" required class="flex-1 min-w-0 text-base p-1.5 border border-slate-300 rounded-lg bg-white focus:outline-none">
+<option value="">Seleccionar insumo...</option>
+<template x-for="ing in ingredients" :key="ing.id"><option :value="ing.id" x-text="ing.name + ' (' + formatMoney(ing.totalCost / ing.units) + '/' + ing.unitType + ')'"></option></template>
+</select>
+<input type="text" x-model="row.portion" required placeholder="Ej: 1, 0.25" class="w-20 text-base p-1.5 border border-slate-300 rounded-lg focus:outline-none">
+<button type="button" @click="removeRecipeRow(index)" class="text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
+</div>
+</template>
+</div>
+</div>
+<div class="bg-slate-100 p-3 rounded-xl space-y-1 text-xs">
+<div class="flex justify-between text-slate-600"><span>Costo Aproximado Receta:</span><strong class="text-rose-600" x-text="formatMoney(calculateFormDishCost())"></strong></div>
+<div class="flex justify-between text-slate-600"><span>Ganancia Estimada:</span><strong class="text-emerald-600" x-text="formatMoney(dishForm.price - calculateFormDishCost())"></strong></div>
+</div>
+<div class="flex justify-end space-x-2 pt-2 border-t">
+<button type="button" @click="showDishModal = false" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
+<button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md">Guardar Plato</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- MODAL VENTA RAPIDA -->
+<div x-show="showQuickSaleModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4">
+<div class="flex justify-between items-center border-b pb-2">
+<h3 class="font-bold text-slate-800 text-base">Registrar Venta Directa</h3>
+<button @click="showQuickSaleModal = false" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark text-lg"></i></button>
+</div>
+<div class="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1">
+<template x-for="dish in dishes" :key="dish.id">
+<button @click="quickSell(dish); showQuickSaleModal = false;" class="flex justify-between items-center p-3 bg-slate-50 hover:bg-brand-50 border border-slate-200 hover:border-brand-300 rounded-xl transition text-left">
+<div><p class="font-bold text-slate-800 text-sm" x-text="dish.name"></p><span class="text-xs text-brand-600 font-bold" x-text="formatMoney(dish.price)"></span></div>
+<span class="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">+ Vender 1</span>
+</button>
+</template>
+</div>
+</div>
+</div>
+
+<!-- MODAL VENDER (CANTIDAD) -->
+<div x-show="showSellModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
+<div class="flex justify-between items-center border-b pb-2">
+<h3 class="font-bold text-slate-800 text-base">Vender plato</h3>
+<button @click="showSellModal = false" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark text-lg"></i></button>
+</div>
+<div>
+<p class="font-bold text-slate-800 text-sm" x-text="sellDish ? sellDish.name : ''"></p>
+<p class="text-xs text-brand-600 font-bold" x-text="sellDish ? formatMoney(sellDish.price) + ' c/u' : ''"></p>
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-700 mb-1">¿Cuántas unidades?</label>
+<div class="flex items-center space-x-2">
+<button type="button" @click="sellQty = Math.max(1, (parseInt(sellQty) || 1) - 1)" class="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 text-xl font-bold text-slate-700 active:bg-slate-200">−</button>
+<input type="number" inputmode="numeric" min="1" step="1" x-model="sellQty" class="flex-1 min-w-0 text-center text-xl font-bold p-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+<button type="button" @click="sellQty = (parseInt(sellQty) || 0) + 1" class="w-11 h-11 rounded-xl bg-brand-600 text-white text-xl font-bold active:bg-brand-700">+</button>
+</div>
+</div>
+<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex justify-between text-sm">
+<span class="text-emerald-800">Total a cobrar:</span>
+<strong class="text-emerald-700" x-text="formatMoney(sellDish ? sellDish.price * (parseInt(sellQty) || 0) : 0)"></strong>
+</div>
+<div class="flex justify-end space-x-2 pt-2 border-t">
+<button type="button" @click="showSellModal = false" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
+<button type="button" @click="confirmSell()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md">Registrar venta</button>
+</div>
+</div>
+</div>
+
+<!-- MODAL BUSCAR (LUPA) -->
+<div x-show="showSearchModal" x-cloak @keydown.escape.window="showSearchModal = false" class="fixed inset-0 bg-slate-900/60 z-50 flex items-start justify-center p-4 pt-10">
+<div class="bg-white w-full max-w-md rounded-2xl p-4 shadow-2xl space-y-3 max-h-[85vh] flex flex-col">
+<div class="flex items-center space-x-2">
+<div class="flex-1 flex items-center bg-slate-100 rounded-xl px-3 border border-slate-200 focus-within:ring-2 focus-within:ring-brand-500">
+<i class="fa-solid fa-magnifying-glass text-sm mr-2"></i>
+<input x-ref="searchInput" type="search" x-model="searchQuery" placeholder="Buscar insumos, platos o ventas..." class="w-full bg-transparent text-base py-2.5 focus:outline-none">
+</div>
+<button @click="showSearchModal = false" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+</div>
+<div class="overflow-y-auto space-y-3 flex-1">
+<template x-if="searchQuery.trim() === ''"><p class="text-center py-6 text-xs text-slate-400">Escribe para buscar en tus insumos, platos e historial.</p></template>
+<template x-if="searchQuery.trim() !== '' && searchResults.total === 0"><p class="text-center py-6 text-xs text-slate-400">No se encontró nada con esa búsqueda.</p></template>
+<template x-if="searchResults.ingredients.length > 0"><div>
+<h4 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Insumos</h4>
+<div class="space-y-1.5">
+<template x-for="item in searchResults.ingredients" :key="item.id">
+<button @click="goToSearchResult('ingredients')" class="w-full flex justify-between items-center p-2.5 bg-slate-50 hover:bg-brand-50 border border-slate-200 rounded-xl text-left">
+<span class="font-bold text-slate-800 text-xs" x-text="item.name"></span>
+<span class="text-[11px] text-brand-700 font-bold" x-text="formatMoney(item.totalCost / item.units) + ' / ' + item.unitType"></span>
+</button>
+</template>
+</div></div></template>
+<template x-if="searchResults.dishes.length > 0"><div>
+<h4 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Platos</h4>
+<div class="space-y-1.5">
+<template x-for="dish in searchResults.dishes" :key="dish.id">
+<button @click="showSearchModal = false; openSellModal(dish)" class="w-full flex justify-between items-center p-2.5 bg-slate-50 hover:bg-brand-50 border border-slate-200 rounded-xl text-left">
+<span class="font-bold text-slate-800 text-xs" x-text="dish.name"></span>
+<span class="text-[11px] text-brand-700 font-bold" x-text="formatMoney(dish.price)"></span>
+</button>
+</template>
+</div></div></template>
+<template x-if="searchResults.history.length > 0"><div>
+<h4 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Historial</h4>
+<div class="space-y-1.5">
+<template x-for="log in searchResults.history" :key="log.id">
+<button @click="goToSearchResult('history')" class="w-full flex justify-between items-center p-2.5 bg-slate-50 hover:bg-brand-50 border border-slate-200 rounded-xl text-left">
+<span><span class="font-bold text-slate-800 text-xs block" x-text="log.description"></span><span class="text-[10px] text-slate-400" x-text="formatDateTime(log.date)"></span></span>
+<span class="text-[11px] font-extrabold" :class="log.type === 'sale' ? 'text-emerald-600' : 'text-rose-600'" x-text="(log.type === 'sale' ? '+ ' : '- ') + formatMoney(log.amount)"></span>
+</button>
+</template>
+</div></div></template>
+</div>
+</div>
+</div>
+
+<!-- TOAST -->
+<div x-show="toast.show" x-cloak class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-2xl z-50 flex items-center space-x-2 border border-slate-700 max-w-[90%]">
+<i class="fa-solid fa-circle-check text-base"></i><span x-text="toast.message"></span>
+</div>
+
+<script>
+function appData() {
+return {
+activeTab: 'dashboard',
+historyFilter: 'today',
+showIngredientModal: false,
+showDishModal: false,
+showQuickSaleModal: false,
+editingIngredientId: null,
+editingDishId: null,
+toast: { show: false, message: '' },
+showSearchModal: false,
+searchQuery: '',
+dishSearch: '',
+prodFilter: 'today',
+showSellModal: false,
+sellDish: null,
+sellQty: 1,
+
+openSellModal(dish) {
+this.sellDish = dish;
+this.sellQty = 1;
+this.showSellModal = true;
+},
+confirmSell() {
+const dish = this.sellDish;
+if (!dish) return;
+const qty = Math.max(1, Math.floor(Number(this.sellQty)) || 1);
+const price = parseFloat(dish.price) || 0;
+this.history.unshift({ id: Date.now().toString(), type: 'sale', description: 'Venta: ' + qty + ' x ' + dish.name, amount: price * qty, qty: qty, cost: this.calculateDishCost(dish) * qty, date: new Date().toISOString() });
+this.saveHistory();
+this.showSellModal = false;
+this.showNotification(qty + ' x ' + dish.name + ' vendido(s) (+ ' + this.formatMoney(price * qty) + ')');
+},
+get filteredDishes() {
+const q = this.normalizeText(this.dishSearch.trim());
+if (!q) return this.dishes;
+return this.dishes.filter(d => this.normalizeText(d.name).includes(q) || (d.recipe || []).some(r => this.normalizeText(this.getIngredientName(r.ingredientId)).includes(q)));
+},
+get salesByProduct() {
+const now = new Date();
+const f = this.prodFilter;
+const map = {};
+this.history.forEach(item => {
+if (item.type !== 'sale') return;
+const d = new Date(item.date);
+if (f === 'today' && d.toDateString() !== now.toDateString()) return;
+if (f === 'week' && d < new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)) return;
+if (f === 'month' && !(d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear())) return;
+let desc = String(item.description || '').replace(/^Venta:\s*/, '');
+let qty = item.qty || 1;
+const m = desc.match(/^(\d+)\s*x\s*(.+)$/);
+if (m) { qty = item.qty || parseInt(m[1]); desc = m[2]; }
+const name = desc.trim();
+let cost;
+if (typeof item.cost === 'number') cost = item.cost;
+else { const dish = this.dishes.find(x => x.name === name); cost = dish ? this.calculateDishCost(dish) * qty : 0; }
+if (!map[name]) map[name] = { name, units: 0, total: 0, profit: 0 };
+map[name].units += qty;
+map[name].total += item.amount;
+map[name].profit += item.amount - cost;
+});
+return Object.values(map).sort((a, b) => b.profit - a.profit);
+},
+get salesByProductTotals() {
+return this.salesByProduct.reduce((acc, p) => ({ units: acc.units + p.units, total: acc.total + p.total, profit: acc.profit + p.profit }), { units: 0, total: 0, profit: 0 });
+},
+get todayExtra() {
+const todayStr = new Date().toDateString();
+let units = 0, profit = 0;
+this.history.forEach(item => {
+if (item.type === 'sale' && new Date(item.date).toDateString() === todayStr) {
+units += item.qty || 1;
+if (typeof item.cost === 'number') profit += item.amount - item.cost;
+}
+});
+return { units, profit };
+},
+
+openSearch() {
+this.searchQuery = '';
+this.showSearchModal = true;
+this.$nextTick(() => { if (this.$refs.searchInput) this.$refs.searchInput.focus(); });
+},
+goToSearchResult(tab) {
+this.showSearchModal = false;
+if (tab === 'history') this.historyFilter = 'all';
+this.activeTab = tab;
+},
+normalizeText(s) {
+return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+},
+get searchResults() {
+const q = this.normalizeText(this.searchQuery.trim());
+if (!q) return { ingredients: [], dishes: [], history: [], total: 0 };
+const ingredients = this.ingredients.filter(i => this.normalizeText(i.name).includes(q));
+const dishes = this.dishes.filter(d => this.normalizeText(d.name).includes(q) || (d.recipe || []).some(r => this.normalizeText(this.getIngredientName(r.ingredientId)).includes(q)));
+const history = this.history.filter(h => this.normalizeText(h.description).includes(q)).slice(0, 20);
+return { ingredients, dishes, history, total: ingredients.length + dishes.length + history.length };
+},
+ingredients: [],
+dishes: [],
+history: [],
+ingredientForm: { name: '', totalCost: 0, units: 1, unitType: 'unidades', durabilityDays: 7 },
+dishForm: { name: '', price: 0, recipe: [] },
+
+initApp() {
+this.loadStoredData(); this.loadBuild();
+try { const s = localStorage.getItem('sabor_customer'); if (s) this.cust = JSON.parse(s); } catch (e) {}
+const go = () => this.fbInit();
+if (window.FB) go(); else window.addEventListener('fb-ready', go);
+},
+role: null, authView: 'home', authName: '', authPass: '', authError: '', sellerName: '',
+cust: null, custForm: { name: '', phone: '', pass: '' }, showCustPass: false,
+menuItems: [], menuInfo: { address: '' }, cart: {}, orderNote: '', orderSent: null, orderMsg: '', myOrders: [], busy: false,
+orders: [], newOrderBanner: null, audioCtx: null, unsubs: [],
+WA: '50494149886',
+SELLER_HASH: '495524c206230edb763905976e5aa95547e2e188141964663e397d9acdccbe34', ADMIN_HASH: 'f0f7e7adad0ca73a4a6b93620cb1767fdc062e946cf538beab9e4a2d15e189e7',
+async sha(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); },
+fbInit() {
+window.FB.watchMenu(m => { this.menuItems = m.items || []; this.menuInfo = Object.assign({ address: '' }, m.info || {}); this.menuBuild = m.build || { price: 60, options: [] }; });
+},
+goAuth(v) { this.authView = v; this.authPass = ''; this.authError = ''; },
+custEnter() {
+if (this.cust) {
+if (this.authPass === this.cust.pass) { this.startCustomer(); } else { this.authError = 'Clave incorrecta'; }
+} else if (this.authPass === '1234') { this.authView = 'custProfile'; this.authError = ''; }
+else { this.authError = 'Clave incorrecta'; }
+},
+custCreate() {
+const f = this.custForm;
+const phone = String(f.phone).replace(/\D/g, '');
+if (!f.name.trim()) { this.authError = 'Escribe tu nombre'; return; }
+if (phone.length < 8) { this.authError = 'Escribe un celular válido'; return; }
+if (String(f.pass).length < 4 || f.pass === '1234') { this.authError = 'Crea una clave de 4 o más caracteres (distinta de 1234)'; return; }
+this.cust = { name: f.name.trim(), phone: phone, pass: f.pass };
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.startCustomer();
+},
+resetPhone: '',
+showCheckout: false, payMethod: '', paidWith: '', proofData: '', proofName: '', checkoutMsg: '', showMyOrders: false,
+showProof: false, proofView: { loading: false, err: '', data: '', name: '' }, etaInputs: {},
+statusLabel(s) { return { pending: 'Esperando confirmación', confirmed: 'En preparación', delivered: 'Entregado', rejected: 'Rechazado' }[s] || s; },
+payLabel(o) { return o.payMethod === 'cash' ? 'Efectivo' : (o.payMethod === 'transfer' ? 'Transferencia' : 'No indicado'); },
+async markPaid(o) {
+try { await window.FB.updateOrder(o.id, { paid: true, paidAt: Date.now() }); this.showNotification('Pago confirmado'); } catch (e) { this.showNotification('No se pudo confirmar. Revisa Internet'); }
+},
+async viewProof(o) {
+this.proofView = { loading: true, err: '', data: '', name: '' }; this.showProof = true;
+if (!o.proofId) { this.proofView = { loading: false, err: 'Este pedido no tiene comprobante', data: '', name: '' }; return; }
+try {
+const p = await window.FB.getProof(o.proofId);
+this.proofView = p ? { loading: false, err: '', data: p.data, name: p.name } : { loading: false, err: 'No se encontró el comprobante', data: '', name: '' };
+} catch (e) { this.proofView = { loading: false, err: 'No se pudo cargar. Revisa Internet', data: '', name: '' }; }
+},
+async updateEta(o) {
+const m = parseInt(this.etaInputs[o.id] !== undefined ? this.etaInputs[o.id] : (o.prepMinutes || 15));
+if (!m || m < 1 || m > 180) { this.showNotification('Escribe minutos entre 1 y 180'); return; }
+try { await window.FB.updateOrder(o.id, { prepMinutes: m, etaAt: Date.now() + m * 60000 }); this.showNotification('Tiempo actualizado: ' + m + ' min'); } catch (e) { this.showNotification('No se pudo actualizar. Revisa Internet'); }
+},
+async markDelivered(o) {
+try { await window.FB.updateOrder(o.id, { status: 'delivered', deliveredAt: Date.now() }); this.showNotification('Pedido entregado'); } catch (e) { this.showNotification('No se pudo marcar. Revisa Internet'); }
+},
+build: { price: 60, options: [] }, menuBuild: { price: 60, options: [] }, newOpt: { name: '', cat: 'Proteína' },
+customCart: [], showBuild: false, buildSel: {}, buildMsg: '', showThanks: false, nowTs: Date.now(), timerId: null,
+loadBuild() { try { const b = localStorage.getItem('sabor_build'); if (b) this.build = JSON.parse(b); } catch (e) {} },
+saveBuild() { try { localStorage.setItem('sabor_build', JSON.stringify(this.build)); } catch (e) {} },
+addOpt() {
+const n = this.newOpt.name.trim();
+if (!n || this.build.options.some(o => o.name === n)) return;
+this.build.options.push({ name: n, cat: this.newOpt.cat });
+this.newOpt.name = ''; this.saveBuild();
+},
+removeOpt(i) { this.build.options.splice(i, 1); this.saveBuild(); },
+BUILD_EGGS: [{ name: 'Huevo picado', extra: 0 }, { name: 'Huevo en torta', extra: 0 }, { name: 'Huevo con tomate y cebolla', extra: 0 }, { name: 'Huevo cocido', extra: 0 }, { name: 'Huevo picado con chorizo', extra: 15 }],
+BUILD_COMPS: ['Frijoles fritos', 'Frijoles parados', 'Frijoles salteados', 'Plátano maduro', 'Mantequilla', 'Queso', 'Quesillo', 'Aguacate'],
+BUILD_SIDES: ['Tortillas de maíz (2 uds.)', 'Pan blanco'],
+buildEgg: '', buildComps: [], buildSide: '',
+openBuild() { this.buildEgg = ''; this.buildComps = []; this.buildSide = ''; this.buildMsg = ''; this.showBuild = true; },
+toggleComp(c) {
+const i = this.buildComps.indexOf(c);
+if (i >= 0) { this.buildComps.splice(i, 1); this.buildMsg = ''; }
+else if (this.buildComps.length >= 3) { this.buildMsg = 'Máximo 3 complementos'; }
+else { this.buildComps.push(c); this.buildMsg = ''; }
+},
+get buildBase() { return Number(this.menuBuild && this.menuBuild.price) || 60; },
+get buildPrice() { const e = this.BUILD_EGGS.find(x => x.name === this.buildEgg); return this.buildBase + (e ? e.extra : 0); },
+get buildValid() { return !!this.buildEgg && this.buildComps.length >= 1 && this.buildComps.length <= 3 && !!this.buildSide; },
+get buildGroups() {
+const order = [], map = {};
+(this.menuBuild.options || []).forEach(o => { if (!map[o.cat]) { map[o.cat] = []; order.push(o.cat); } map[o.cat].push(o); });
+return order.map(c => ({ cat: c, items: map[c] }));
+},
+addBuild() {
+if (!this.buildValid) { this.buildMsg = 'Elige 1 huevo, de 1 a 3 complementos y 1 acompañamiento'; return; }
+this.customCart.push({ name: 'Desayuno a tu gusto: ' + this.buildEgg + ' · ' + this.buildComps.join(', ') + ' · ' + this.buildSide, price: this.buildPrice, qty: 1 });
+this.showBuild = false;
+},
+startThanks() {
+this.showThanks = true; this.nowTs = Date.now();
+if (this.timerId) clearInterval(this.timerId);
+this.timerId = setInterval(() => { this.nowTs = Date.now(); }, 1000);
+},
+get currentOrder() { if (!this.orderSent) return null; return this.myOrders.find(x => x.createdAt === this.orderSent.createdAt) || this.orderSent; },
+get remainingSecs() { const o = this.currentOrder; if (!o) return 0; return Math.max(0, Math.ceil(((o.etaAt || (o.createdAt + 900000)) - this.nowTs) / 1000)); },
+get etaMinutes() { return Math.ceil(this.remainingSecs / 60); },
+get timerText() { const s = this.remainingSecs; return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); },
+get timerMsg() { return this.remainingSecs > 0 ? 'Tiempo estimado de entrega' : 'Tu desayuno ya debe estar listo'; },
+get orderStatus() { const o = this.currentOrder; return o ? o.status : 'pending'; },
+get prepPct() { const o = this.currentOrder; const tot = ((o && o.prepMinutes) || 15) * 60; return Math.min(100, Math.max(0, 100 - this.remainingSecs / tot * 100)); },
+get webauthnOk() { return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext); },
+b64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); },
+unb64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); },
+async enableBio() {
+try {
+const cred = await navigator.credentials.create({ publicKey: {
+challenge: crypto.getRandomValues(new Uint8Array(32)),
+rp: { name: 'SaborControl' },
+user: { id: new TextEncoder().encode(this.cust.phone), name: this.cust.phone, displayName: this.cust.name },
+pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+timeout: 60000 } });
+this.cust.credId = this.b64(cred.rawId);
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.showNotification('Huella / patrón activado');
+} catch (e) { this.showNotification('No se pudo activar. El celular debe tener huella o patrón configurado'); }
+},
+async bioEnter() {
+try {
+await navigator.credentials.get({ publicKey: {
+challenge: crypto.getRandomValues(new Uint8Array(32)),
+allowCredentials: [{ type: 'public-key', id: this.unb64(this.cust.credId) }],
+userVerification: 'required', timeout: 60000 } });
+this.startCustomer();
+} catch (e) { this.authError = 'No se pudo verificar. Usa tu clave.'; }
+},
+resetPass() {
+const ph = String(this.resetPhone).replace(/\D/g, '');
+if (!this.cust || ph !== this.cust.phone) { this.authError = 'Ese celular no coincide con el de tu cuenta'; return; }
+const p = String(this.custForm.pass);
+if (p.length < 4 || p === '1234') { this.authError = 'Crea una clave de 4 o más caracteres (distinta de 1234)'; return; }
+this.cust.pass = p;
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.custForm.pass = '';
+this.startCustomer();
+},
+startCustomer() {
+this.role = 'customer'; this.authError = '';
+if (window.FB) this.unsubs.push(window.FB.watchMyOrders(this.cust.phone, l => { this.myOrders = l; }));
+},
+async sellerEnter() {
+if (!this.authName.trim()) { this.authError = 'Escribe tu nombre'; return; }
+if (await this.sha(this.authPass) !== this.SELLER_HASH) { this.authError = 'Clave incorrecta'; return; }
+this.sellerName = this.authName.trim(); this.role = 'seller'; this.activeTab = 'orders'; this.authError = ''; this.startStaff();
+},
+async adminEnter() {
+if (await this.sha(this.authPass) !== this.ADMIN_HASH) { this.authError = 'Clave incorrecta'; return; }
+this.sellerName = 'Admin'; this.role = 'admin'; this.activeTab = 'dashboard'; this.authError = ''; this.startStaff();
+},
+startStaff() {
+try { this.audioCtx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)(); this.audioCtx.resume(); } catch (e) {}
+try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+if (window.FB) this.unsubs.push(window.FB.watchOrders((list, added) => {
+this.orders = list;
+added.filter(o => o.status === 'pending').forEach(o => this.notifyOrder(o));
+}));
+},
+notifyOrder(o) {
+this.newOrderBanner = 'Nuevo pedido de ' + o.customerName + ' (' + this.formatMoney(o.total) + ')';
+this.playTone();
+try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {}
+try { if ('Notification' in window && Notification.permission === 'granted') new Notification('Nuevo pedido', { body: o.customerName + ': ' + this.itemsText(o) }); } catch (e) {}
+},
+playTone() {
+try {
+const ctx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)(); this.audioCtx = ctx;
+const notes = [659, 784, 988, 784, 988, 1319]; let t = ctx.currentTime;
+for (let r = 0; r < 2; r++) notes.forEach(f => {
+const o = ctx.createOscillator(), g = ctx.createGain();
+o.type = 'sine'; o.frequency.value = f;
+g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.3); t += 0.3;
+});
+} catch (e) {}
+},
+logout() {
+this.unsubs.forEach(u => { try { u(); } catch (e) {} }); this.unsubs = [];
+this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.cart = {}; this.orderSent = null; this.showCustPass = false;
+},
+itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name).join(', '); },
+changeQty(item, d) { const q = Math.max(0, (this.cart[item.name] || 0) + d); this.cart = Object.assign({}, this.cart, { [item.name]: q }); },
+get cartItems() { return this.menuItems.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, price: c.price, qty: c.qty }))); },
+get cartTotal() { return this.cartItems.reduce((a, i) => a + i.price * i.qty, 0); },
+openCheckout() {
+this.orderMsg = '';
+if (this.cartItems.length === 0) { this.orderMsg = 'Agrega al menos un plato o arma tu desayuno'; return; }
+this.payMethod = ''; this.paidWith = ''; this.proofData = ''; this.proofName = ''; this.checkoutMsg = ''; this.showCheckout = true;
+},
+get changeDue() { return (Number(this.paidWith) || 0) - this.cartTotal; },
+get checkoutValid() {
+if (this.payMethod === 'cash') return String(this.paidWith) !== '' && Number(this.paidWith) >= this.cartTotal && this.cartTotal > 0;
+if (this.payMethod === 'transfer') return !!this.proofData;
+return false;
+},
+pickProof(ev) {
+const f = ev.target.files && ev.target.files[0];
+this.checkoutMsg = ''; this.proofData = ''; this.proofName = '';
+if (!f) return;
+const rd = new FileReader();
+if (f.type === 'application/pdf') {
+if (f.size > 600000) { this.checkoutMsg = 'El PDF pesa mucho. Sube una foto del comprobante.'; return; }
+rd.onload = () => { this.proofData = rd.result; this.proofName = f.name; };
+rd.readAsDataURL(f); return;
+}
+if (f.type.indexOf('image/') !== 0) { this.checkoutMsg = 'Sube una imagen o un PDF'; return; }
+rd.onload = () => {
+const img = new Image();
+img.onload = () => {
+const k = Math.min(1, 1000 / Math.max(img.width, img.height));
+const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+this.proofData = c.toDataURL('image/jpeg', 0.65); this.proofName = f.name;
+};
+img.onerror = () => { this.checkoutMsg = 'No se pudo leer la imagen'; };
+img.src = rd.result;
+};
+rd.readAsDataURL(f);
+},
+async sendOrder() {
+if (!this.checkoutValid) return;
+this.busy = true; this.checkoutMsg = '';
+const now = Date.now();
+const order = { customerName: this.cust.name, phone: this.cust.phone, items: this.cartItems, note: this.orderNote.trim(), total: this.cartTotal, status: 'pending', createdAt: now, payMethod: this.payMethod, paid: false, prepMinutes: 15, etaAt: now + 900000 };
+if (this.payMethod === 'cash') { order.paidWith = Number(this.paidWith); order.change = Number(this.paidWith) - this.cartTotal; }
+try {
+if (this.payMethod === 'transfer') { order.proofId = await window.FB.addProof(this.proofData, this.proofName); }
+await window.FB.addOrder(order);
+this.orderSent = order; this.cart = {}; this.customCart = []; this.orderNote = ''; this.showCheckout = false; this.startThanks();
+} catch (e) { this.checkoutMsg = 'No se pudo enviar. Revisa tu Internet e intenta de nuevo.'; }
+this.busy = false;
+},
+waLink(o) {
+const lines = ['Hola, quiero hacer un pedido:'].concat((o.items || []).map(i => '- ' + i.qty + ' x ' + i.name));
+if (o.note) lines.push('Desayuno: ' + o.note);
+lines.push('Total: Lps. ' + Number(o.total).toFixed(2), 'Nombre: ' + o.customerName, 'Celular: ' + o.phone);
+return 'https://wa.me/' + this.WA + '?text=' + encodeURIComponent(lines.join('\n'));
+},
+get pendingOrders() { return this.orders.filter(o => o.status === 'pending').sort((a, b) => a.createdAt - b.createdAt); },
+get confirmedToday() { const t = new Date().toDateString(); return this.orders.filter(o => (o.status === 'confirmed' || o.status === 'delivered') && new Date(o.confirmedAt || o.createdAt).toDateString() === t); },
+get liquidation() {
+const t = new Date().toDateString();
+const counter = this.history.filter(h => h.type === 'sale' && !String(h.description).startsWith('Pedido en línea') && new Date(h.date).toDateString() === t).reduce((a, h) => a + h.amount, 0);
+const online = this.confirmedToday.reduce((a, o) => a + o.total, 0);
+return { counter, online, total: counter + online };
+},
+async confirmOrder(o) {
+if (o.status !== 'pending') return;
+try { await window.FB.setOrderStatus(o.id, 'confirmed', this.sellerName); } catch (e) { this.showNotification('No se pudo confirmar. Revisa Internet'); return; }
+let cost = 0;
+(o.items || []).forEach(i => { const d = this.dishes.find(x => x.name === i.name); if (d) cost += this.calculateDishCost(d) * i.qty; });
+const units = (o.items || []).reduce((a, i) => a + i.qty, 0) || 1;
+this.history.unshift({ id: Date.now().toString(), type: 'sale', description: 'Pedido en línea: ' + this.itemsText(o) + ' (' + o.customerName + ')', amount: o.total, qty: units, cost: cost, date: new Date().toISOString() });
+this.saveHistory();
+this.showNotification('Pedido confirmado y cobrado');
+},
+async rejectOrder(o) {
+if (o.status !== 'pending') return;
+try { await window.FB.setOrderStatus(o.id, 'rejected', this.sellerName); this.showNotification('Pedido rechazado'); } catch (e) { this.showNotification('No se pudo rechazar. Revisa Internet'); }
+},
+async publishMenu() {
+let addr = '';
+try { addr = localStorage.getItem('sabor_address') || ''; } catch (e) {}
+const a = window.prompt('Dirección del negocio (se muestra a los clientes):', addr);
+if (a === null) return;
+try { localStorage.setItem('sabor_address', a); } catch (e) {}
+try {
+await window.FB.publishMenu({ items: this.dishes.map(d => ({ name: d.name, price: Number(d.price) })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } });
+this.showNotification('Menú publicado para los clientes');
+} catch (e) { this.showNotification('No se pudo publicar. Revisa Internet'); }
+},
+
+showNotification(msg) {
+this.toast.message = msg;
+this.toast.show = true;
+setTimeout(() => { this.toast.show = false; }, 2500);
+},
+
+loadStoredData() {
+let sI = null, sD = null, sH = null;
+try {
+sI = localStorage.getItem('sabor_ingredients');
+sD = localStorage.getItem('sabor_dishes');
+sH = localStorage.getItem('sabor_history');
+} catch (e) { console.error('Almacenamiento no disponible', e); }
+try {
+if (sI) { this.ingredients = JSON.parse(sI); }
+else {
+const now = new Date().toISOString();
+this.ingredients = [
+{ id: '1', name: 'Cartón de Huevos', totalCost: 155, units: 30, unitType: 'unidades', durabilityDays: 14, purchaseDate: now },
+{ id: '2', name: 'Medida de Frijoles', totalCost: 130, units: 5, unitType: 'libras', durabilityDays: 7, purchaseDate: now },
+{ id: '3', name: 'Queso Duro Blando', totalCost: 80, units: 2, unitType: 'libras', durabilityDays: 5, purchaseDate: now },
+{ id: '4', name: 'Plátanos Maduros', totalCost: 40, units: 10, unitType: 'unidades', durabilityDays: 4, purchaseDate: now }
+];
+this.saveIngredients();
+}
+if (sD) { this.dishes = JSON.parse(sD); }
+else {
+this.dishes = [
+{ id: '101', name: 'Desayuno Completo', price: 45, recipe: [
+{ ingredientId: '1', portion: '1' }, { ingredientId: '2', portion: '0.25' },
+{ ingredientId: '3', portion: '0.1' }, { ingredientId: '4', portion: '1' } ] },
+{ id: '102', name: 'Baleada Sencilla', price: 25, recipe: [
+{ ingredientId: '2', portion: '0.2' }, { ingredientId: '3', portion: '0.05' } ] }
+];
+this.saveDishes();
+}
+if (sH) { this.history = JSON.parse(sH); }
+else {
+const today = new Date().toISOString();
+this.history = [
+{ id: 'h1', type: 'sale', description: 'Venta: Desayuno Completo', amount: 45, date: today },
+{ id: 'h2', type: 'sale', description: 'Venta: Baleada Sencilla', amount: 25, date: today },
+{ id: 'h3', type: 'expense', description: 'Compra: Cartón de Huevos', amount: 155, date: today }
+];
+this.saveHistory();
+}
+} catch (e) { console.error('Error al cargar datos locales', e); }
+},
+
+saveIngredients() { try { localStorage.setItem('sabor_ingredients', JSON.stringify(this.ingredients)); } catch (e) { console.error(e); } },
+saveDishes() { try { localStorage.setItem('sabor_dishes', JSON.stringify(this.dishes)); } catch (e) { console.error(e); } },
+saveHistory() { try { localStorage.setItem('sabor_history', JSON.stringify(this.history)); } catch (e) { console.error(e); } },
+
+openIngredientModal() {
+this.editingIngredientId = null;
+this.ingredientForm = { name: '', totalCost: 0, units: 1, unitType: 'unidades', durabilityDays: 7 };
+this.showIngredientModal = true;
+},
+editIngredient(item) {
+this.editingIngredientId = item.id;
+this.ingredientForm = { ...item };
+this.showIngredientModal = true;
+},
+saveIngredient() {
+if (!this.ingredientForm.name.trim()) return;
+if (this.editingIngredientId) {
+const index = this.ingredients.findIndex(i => i.id === this.editingIngredientId);
+if (index !== -1) this.ingredients[index] = { ...this.ingredientForm, id: this.editingIngredientId };
+} else {
+const newIng = { ...this.ingredientForm, id: Date.now().toString(), purchaseDate: new Date().toISOString() };
+this.ingredients.push(newIng);
+this.history.unshift({ id: Date.now().toString() + '_h', type: 'expense', description: 'Compra: ' + newIng.name, amount: parseFloat(newIng.totalCost) || 0, date: newIng.purchaseDate });
+this.saveHistory();
+}
+this.saveIngredients();
+this.showIngredientModal = false;
+this.showNotification('Insumo guardado correctamente');
+},
+deleteIngredient(id) {
+this.ingredients = this.ingredients.filter(i => i.id !== id);
+this.saveIngredients();
+this.showNotification('Insumo eliminado');
+},
+getIngredientName(id) {
+const found = this.ingredients.find(i => i.id === id);
+return found ? found.name : 'Desconocido';
+},
+getDaysRemaining(item) {
+const expiry = new Date(item.purchaseDate);
+expiry.setDate(expiry.getDate() + parseInt(item.durabilityDays));
+return Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
+},
+
+openDishModal() {
+this.editingDishId = null;
+this.dishForm = { name: '', price: 0, recipe: [] };
+this.addRecipeRow();
+this.showDishModal = true;
+},
+editDish(dish) {
+this.editingDishId = dish.id;
+this.dishForm = JSON.parse(JSON.stringify(dish));
+this.showDishModal = true;
+},
+addRecipeRow() { this.dishForm.recipe.push({ ingredientId: '', portion: '1' }); },
+removeRecipeRow(index) { this.dishForm.recipe.splice(index, 1); },
+saveDish() {
+if (!this.dishForm.name.trim()) return;
+this.dishForm.recipe = this.dishForm.recipe.filter(r => r.ingredientId);
+if (this.editingDishId) {
+const index = this.dishes.findIndex(d => d.id === this.editingDishId);
+if (index !== -1) this.dishes[index] = { ...this.dishForm, id: this.editingDishId };
+} else {
+this.dishes.push({ ...this.dishForm, id: Date.now().toString() });
+}
+this.saveDishes();
+this.showDishModal = false;
+this.showNotification('Plato guardado con éxito');
+},
+deleteDish(id) {
+this.dishes = this.dishes.filter(d => d.id !== id);
+this.saveDishes();
+this.showNotification('Plato eliminado');
+},
+calculateDishCost(dish) {
+if (!dish || !dish.recipe) return 0;
+let total = 0;
+dish.recipe.forEach(item => {
+const ing = this.ingredients.find(i => i.id === item.ingredientId);
+if (ing && ing.units > 0) total += (ing.totalCost / ing.units) * (parseFloat(item.portion) || 1);
+});
+return total;
+},
+calculateFormDishCost() { return this.calculateDishCost(this.dishForm); },
+calculateDishMargin(dish) {
+if (!dish || dish.price <= 0) return 0;
+return Math.round(((dish.price - this.calculateDishCost(dish)) / dish.price) * 100);
+},
+
+openQuickSaleModal() { this.showQuickSaleModal = true; },
+quickSell(dish) {
+this.history.unshift({ id: Date.now().toString(), type: 'sale', description: 'Venta: ' + dish.name, amount: parseFloat(dish.price), qty: 1, cost: this.calculateDishCost(dish), date: new Date().toISOString() });
+this.saveHistory();
+this.showNotification('Venta de ' + dish.name + ' registrada (+ ' + this.formatMoney(dish.price) + ')');
+},
+
+deleteHistoryItem(id) {
+this.history = this.history.filter(h => h.id !== id);
+this.saveHistory();
+this.showNotification('Registro eliminado');
+},
+get filteredHistory() {
+const now = new Date();
+return this.history.filter(item => {
+const d = new Date(item.date);
+if (this.historyFilter === 'today') return d.toDateString() === now.toDateString();
+if (this.historyFilter === 'week') return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+if (this.historyFilter === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+return true;
+});
+},
+get todayStats() {
+const todayStr = new Date().toDateString();
+let sales = 0, expenses = 0;
+this.history.forEach(item => {
+if (new Date(item.date).toDateString() === todayStr) {
+if (item.type === 'sale') sales += item.amount;
+if (item.type === 'expense') expenses += item.amount;
+}
+});
+return { sales, expenses, netProfit: sales - expenses };
+},
+get avgMargin() {
+if (this.dishes.length === 0) return 0;
+return Math.round(this.dishes.reduce((a, d) => a + this.calculateDishMargin(d), 0) / this.dishes.length);
+},
+get mostProfitableDish() {
+if (this.dishes.length === 0) return null;
+return [...this.dishes].sort((a, b) => this.calculateDishMargin(b) - this.calculateDishMargin(a))[0];
+},
+get leastProfitableDish() {
+if (this.dishes.length === 0) return null;
+return [...this.dishes].sort((a, b) => this.calculateDishMargin(a) - this.calculateDishMargin(b))[0];
+},
+get topUsedIngredients() {
+const map = {};
+this.dishes.forEach(d => d.recipe.forEach(r => { if (r.ingredientId) map[r.ingredientId] = (map[r.ingredientId] || 0) + 1; }));
+return Object.keys(map).map(id => ({ id, name: this.getIngredientName(id), count: map[id] })).sort((a, b) => b.count - a.count).slice(0, 3);
+},
+get leastUsedIngredients() {
+const map = {};
+this.ingredients.forEach(i => map[i.id] = 0);
+this.dishes.forEach(d => d.recipe.forEach(r => { if (r.ingredientId) map[r.ingredientId] = (map[r.ingredientId] || 0) + 1; }));
+return Object.keys(map).map(id => ({ id, name: this.getIngredientName(id), count: map[id] })).sort((a, b) => a.count - b.count).slice(0, 3);
+},
+get inventoryAlerts() {
+return this.ingredients.map(item => {
+const left = this.getDaysRemaining(item);
+if (left <= 1) return { id: item.id, name: item.name, status: 'Próximo a vencer / agotar' };
+if (left <= 3) return { id: item.id, name: item.name, status: 'Consumo pronto' };
+return null;
+}).filter(Boolean);
+},
+diagnosticProfitText() {
+const m = this.avgMargin;
+if (m >= 50) return '¡Excelente rentabilidad! Tienes un buen margen sobre el costo de tus insumos.';
+if (m >= 30) return 'Rentabilidad saludable. Monitorea los precios de tus insumos principales para mantener el margen.';
+return 'Atención: Tus costos de insumos están absorbiendo la mayoría de tus ingresos. Considera ajustar precios de venta.';
+},
+
+exportToCSV() {
+let csv = "ID,Tipo,Descripcion,Monto (Lps),Fecha\n";
+this.history.forEach(r => { csv += `${r.id},${r.type},"${r.description}",${r.amount},${r.date}\n`; });
+this.showNotification('La descarga no funciona dentro de la página publicada');
+try {
+const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = `Reporte_SaborControl_${new Date().toISOString().slice(0,10)}.csv`;
+document.body.appendChild(a); a.click(); document.body.removeChild(a);
+} catch (e) { console.error(e); }
+},
+
+formatMoney(amount) { return 'Lps. ' + (parseFloat(amount) || 0).toFixed(2); },
+formatDate(s) { if (!s) return ''; return new Date(s).toLocaleDateString('es-HN', { day: '2-digit', month: '2-digit', year: 'numeric' }); },
+formatDateTime(s) { if (!s) return ''; const d = new Date(s); return d.toLocaleDateString('es-HN', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }); },
+todayDateFormatted() { return new Date().toLocaleDateString('es-HN', { weekday: 'short', day: 'numeric', month: 'short' }); }
+}
+}
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, getDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const app = initializeApp({
+  apiKey: "AIzaSyD8-tWvD-AhoWDrCUcqsyphpaCVtE6QMkI",
+  authDomain: "saborcontrol-30cbd.firebaseapp.com",
+  projectId: "saborcontrol-30cbd",
+  storageBucket: "saborcontrol-30cbd.firebasestorage.app",
+  messagingSenderId: "1046431066702",
+  appId: "1:1046431066702:web:f6bcc1586465a3949ef11f"
+});
+const db = getFirestore(app);
+const err = e => console.error("Firestore:", e);
+const toList = s => s.docs.map(d => ({ id: d.id, ...d.data() }));
+window.FB = {
+  addOrder: o => addDoc(collection(db, "orders"), o),
+  updateOrder: (id, f) => updateDoc(doc(db, "orders", id), f),
+  addProof: async (data, name) => (await addDoc(collection(db, "proofs"), { data, name, createdAt: Date.now() })).id,
+  getProof: async id => { const s = await getDoc(doc(db, "proofs", id)); return s.exists() ? s.data() : null; },
+  setOrderStatus: (id, status, by) => updateDoc(doc(db, "orders", id), { status, by, confirmedAt: Date.now() }),
+  publishMenu: m => setDoc(doc(db, "menu", "current"), { ...m, updated: Date.now() }),
+  watchMenu: cb => onSnapshot(doc(db, "menu", "current"), s => cb(s.exists() ? s.data() : {}), err),
+  watchMyOrders: (phone, cb) => onSnapshot(query(collection(db, "orders"), where("phone", "==", phone)), s => cb(toList(s).sort((a, b) => b.createdAt - a.createdAt)), err),
+  watchOrders: cb => { let first = true; return onSnapshot(collection(db, "orders"), s => {
+    const added = first ? [] : s.docChanges().filter(c => c.type === "added").map(c => ({ id: c.doc.id, ...c.doc.data() }));
+    first = false; cb(toList(s), added);
+  }, err); }
+};
+window.dispatchEvent(new Event("fb-ready"));
+</script>
+<script>if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
+</body>
+</html>
