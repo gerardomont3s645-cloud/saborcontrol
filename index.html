@@ -57,6 +57,21 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </div>
 </div>
 
+<!-- DETALLE DEL PLATO (CLIENTE) -->
+<div x-show="itemSel" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<template x-if="itemSel"><div class="bg-white w-full max-w-md rounded-t-2xl max-h-[94vh] overflow-y-auto">
+<div class="h-48 bg-slate-100 flex items-center justify-center overflow-hidden relative"><img x-show="itemSel.image" :src="itemSel.image || ''" class="w-full h-full object-cover"><span x-show="!itemSel.image" class="text-6xl">🍳</span><button @click="itemSel = null" class="absolute top-2 right-2 bg-white/90 w-8 h-8 rounded-full text-slate-700 font-bold">✕</button></div>
+<div class="p-5 space-y-4">
+<div><h3 class="font-extrabold text-slate-800 text-lg" x-text="itemSel.name"></h3><p x-show="itemSel.desc" class="text-xs text-slate-500" x-text="itemSel.desc"></p><p class="text-sm text-brand-600 font-extrabold mt-1" x-text="formatMoney(itemSel.price)"></p></div>
+<div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-3"><span class="text-sm font-bold text-slate-700">¿Cuántas órdenes quieres?</span><div class="flex items-center space-x-2"><button type="button" @click="itemQty = Math.max(1, itemQty - 1)" class="w-9 h-9 rounded-lg bg-white border border-slate-200 font-bold">−</button><span class="w-8 text-center font-extrabold" x-text="itemQty"></span><button type="button" @click="itemQty = itemQty + 1" class="w-9 h-9 rounded-lg bg-brand-600 text-white font-bold">+</button></div></div>
+<template x-if="(itemSel.addons || []).length > 0"><div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Agregar complementos</h4>
+<div class="space-y-1.5"><template x-for="a in itemSel.addons" :key="a.name"><button type="button" @click="toggleAddon(a.name)" :class="itemAddons.indexOf(a.name) >= 0 ? 'bg-brand-50 border-brand-500 text-brand-800' : 'bg-white border-slate-200 text-slate-700'" class="w-full border-2 rounded-xl p-3 text-sm font-bold flex justify-between items-center"><span x-text="(itemAddons.indexOf(a.name) >= 0 ? '☑ ' : '☐ ') + a.name"></span><span class="text-brand-700" x-text="Number(a.price) > 0 ? '+ ' + formatMoney(a.price) : 'Gratis'"></span></button></template></div></div></template>
+<div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800" x-text="itemQty + ' x ' + formatMoney(itemUnit)"></span><strong class="text-brand-700 text-base" x-text="formatMoney(itemTotal)"></strong></div>
+<button @click="buyItem()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-md" x-text="'🛒 Comprar • ' + formatMoney(itemTotal)"></button>
+<button @click="addItemAndContinue()" class="w-full text-xs font-bold text-brand-600 underline">＋ Agregar al pedido y seguir comprando</button>
+</div></div></template>
+</div>
+
 <!-- CHECKOUT / METODO DE PAGO -->
 <div x-show="showCheckout" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
 <div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-4 max-h-[92vh] overflow-y-auto">
@@ -225,8 +240,8 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div x-show="custTab === 'menu'" class="p-4 space-y-4 flex-1">
 <button @click="openBuild()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-2xl p-4 shadow-lg text-left active:scale-95 transition"><span class="block text-[10px] font-extrabold uppercase tracking-wider">⭐ Premium</span><span class="block font-extrabold text-base">Arma tu desayuno a tu gusto</span><span class="block text-sm font-bold" x-text="'Por ' + formatMoney(buildBase) + ' · huevo + 3 complementos + acompañamiento'"></span></button>
 
-<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu desayuno personalizado</h3>
-<template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="c.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price)"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
+<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu pedido</h3>
+<template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="(c.qty || 1) + ' x ' + c.name"></p><p x-show="c.detail" class="text-[11px] text-slate-600" x-text="c.detail"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price * (c.qty || 1))"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
 
 <div class="flex justify-between items-center pt-1"><h2 class="font-bold text-slate-800 text-base">Menú del Día</h2><span class="text-xs text-slate-400" x-text="visibleMenu.length + ' platos'"></span></div>
 
@@ -234,24 +249,10 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <template x-if="visibleMenu.length === 0"><p class="text-xs text-slate-400 bg-slate-50 rounded-xl p-4 text-center">El menú aún no está disponible. Intenta más tarde.</p></template>
 <div class="grid grid-cols-2 gap-3">
 <template x-for="item in visibleMenu" :key="item.name">
-<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition">
-<div class="relative h-28 bg-slate-100 flex items-center justify-center overflow-hidden">
-<template x-if="item.image"><img :src="item.image" class="w-full h-full object-cover"></template>
-<template x-if="!item.image"><span class="text-4xl">🍳</span></template>
-</div>
-<div class="p-3 flex-1 flex flex-col justify-between space-y-2">
-<div>
-<p class="font-bold text-slate-800 text-xs line-clamp-1" x-text="item.name"></p>
-<p class="text-[11px] text-slate-400 line-clamp-1" x-text="item.desc || 'Desayuno fresco hecho al momento'"></p>
-<p class="text-xs text-brand-600 font-extrabold mt-1" x-text="formatMoney(item.price)"></p>
-</div>
-<div class="flex items-center justify-between pt-1">
-<button @click="changeQty(item, -1)" class="w-7 h-7 rounded-lg bg-slate-100 font-bold text-slate-700 active:bg-slate-200">−</button>
-<span class="text-xs font-bold" x-text="cart[item.name] || 0"></span>
-<button @click="changeQty(item, 1)" class="w-7 h-7 rounded-lg bg-brand-600 text-white font-bold active:bg-brand-700">+</button>
-</div>
-</div>
-</div>
+<button type="button" @click="openItem(item)" class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm text-left active:scale-95 transition flex flex-col">
+<div class="relative h-28 bg-slate-100 flex items-center justify-center overflow-hidden"><img x-show="item.image" :src="item.image || ''" class="w-full h-full object-cover"><span x-show="!item.image" class="text-4xl">🍳</span></div>
+<div class="p-3 space-y-0.5"><p class="font-bold text-slate-800 text-sm" x-text="item.name"></p><p class="text-sm text-brand-600 font-extrabold" x-text="formatMoney(item.price)"></p></div>
+</button>
 </template>
 </div>
 
@@ -549,7 +550,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div class="bg-amber-50 border border-amber-300 rounded-2xl p-4 space-y-2">
 <div class="flex justify-between items-start"><div><p class="font-bold text-slate-800 text-sm" x-text="o.customerName"></p><p class="text-xs text-slate-500" x-text="'📞 ' + o.phone + ' · ' + formatDateTime(new Date(o.createdAt).toISOString())"></p></div><span class="font-extrabold text-brand-700 text-sm" x-text="formatMoney(o.total)"></span></div>
 <p class="text-xs font-bold text-slate-900 bg-white border border-amber-200 rounded-lg p-2">📍 Dirección: <span class="text-rose-700 font-extrabold" x-text="o.address || 'Sin dirección'"></span></p>
-<p class="text-xs text-slate-700" x-text="itemsText(o)"></p>
+<div class="bg-white border border-amber-200 rounded-lg p-2 space-y-1"><template x-for="(it, k) in o.items" :key="k"><div class="text-xs"><p class="font-bold text-slate-800" x-text="it.qty + ' x ' + it.name"></p><p x-show="it.detail" class="text-slate-600" x-text="'→ ' + it.detail"></p></div></template></div>
 <p x-show="o.note" class="text-xs bg-white border border-amber-200 rounded-lg p-2 text-slate-700" x-text="'📝 ' + o.note"></p>
 <template x-if="o.payMethod === 'cash'"><div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs"><span class="font-bold text-emerald-800">💵 Pago en Efectivo</span><br><span x-text="'Llevar cambio de: ' + formatMoney(o.change) + ' (Paga con: ' + formatMoney(o.paidWith) + ')'"></span></div></template>
 <template x-if="o.payMethod === 'transfer'"><div class="bg-sky-50 border border-sky-200 rounded-lg p-2 text-xs space-y-1.5"><span class="font-bold text-sky-800">🏦 Pago por Transferencia</span><div class="flex space-x-2"><button @click="viewProof(o)" class="flex-1 bg-white border border-sky-300 text-sky-700 font-bold py-1.5 rounded-lg">👁 Ver comprobante</button><button @click="markPaid(o)" :disabled="o.paid" :class="o.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-600 text-white'" class="flex-1 font-bold py-1.5 rounded-lg" x-text="o.paid ? '✔ Pago recibido' : 'Confirmar pago recibido'"></button></div></div></template>
@@ -674,6 +675,11 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <input type="url" x-model="dishPhotoUrl" @change="dishForm.image = dishPhotoUrl" placeholder="https://..." class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
 <div><label class="block text-xs font-bold text-slate-700 mb-1">Descripción breve del plato</label>
 <input type="text" x-model="dishForm.desc" placeholder="Ej: Frijoles fritos, queso y mantequilla" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+<div class="border-t pt-3 space-y-2">
+<div class="flex justify-between items-center"><label class="block text-xs font-bold text-slate-700">Agregar complementos (con precio)</label><button type="button" @click="dishForm.addons.push({ name: '', price: 0 })" class="text-xs text-brand-600 hover:text-brand-800 font-bold">＋ Agregar complemento</button></div>
+<p class="text-[11px] text-slate-500">El cliente los ve con su precio y se suman al total.</p>
+<template x-for="(ad, ai) in dishForm.addons" :key="ai"><div class="flex items-center space-x-2 bg-amber-50 p-2 rounded-xl border border-amber-200"><input type="text" x-model="ad.name" placeholder="Ej: Aguacate" class="flex-1 min-w-0 text-base p-1.5 border border-slate-300 rounded-lg focus:outline-none"><input type="number" inputmode="decimal" step="0.01" min="0" x-model.number="ad.price" placeholder="Lps" class="w-20 text-base p-1.5 border border-slate-300 rounded-lg focus:outline-none"><button type="button" @click="dishForm.addons.splice(ai, 1)" class="text-slate-400 hover:text-rose-600 p-1">✕</button></div></template>
+</div>
 <div class="border-t pt-3">
 <div class="flex justify-between items-center mb-2">
 <label class="block text-xs font-bold text-slate-700">Ingredientes de la Receta</label>
@@ -924,7 +930,7 @@ ingredients: [],
 dishes: [],
 history: [],
 ingredientForm: { name: '', totalCost: 0, units: 1, unitType: 'unidades', durabilityDays: 7 },
-dishForm: { name: '', price: 0, image: '', desc: '', recipe: [] },
+dishForm: { name: '', price: 0, image: '', desc: '', addons: [], recipe: [] },
 
 initApp() {
 this.loadStoredData(); this.loadBuild();
@@ -1115,10 +1121,10 @@ logout() {
 this.unsubs.forEach(u => { try { u(); } catch (e) {} }); this.unsubs = [];
 this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.cart = {}; this.orderSent = null; this.showCustPass = false;
 },
-itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name).join(', '); },
+itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name + (i.detail ? ' (' + i.detail + ')' : '')).join(', '); },
 changeQty(item, d) { const q = Math.max(0, (this.cart[item.name] || 0) + d); this.cart = Object.assign({}, this.cart, { [item.name]: q }); },
 get visibleMenu() { return (this.menuItems && this.menuItems.length > 0) ? this.menuItems : this.dishes; },
-get cartItems() { return this.visibleMenu.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, price: c.price, qty: c.qty }))); },
+get cartItems() { return this.visibleMenu.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, detail: c.detail || '', price: c.price, qty: c.qty || 1 }))); },
 get cartTotal() { return this.cartItems.reduce((a, i) => a + i.price * i.qty, 0); },
 openCheckout() {
 this.orderMsg = '';
@@ -1203,7 +1209,7 @@ const a = window.prompt('Dirección del negocio (se muestra a los clientes):', a
 if (a === null) return;
 try { localStorage.setItem('sabor_address', a); } catch (e) {}
 try {
-const payload = { items: this.dishes.map(d => ({ name: d.name, price: Number(d.price), image: d.image || '', desc: d.desc || '' })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } };
+const payload = { items: this.dishes.map(d => ({ name: d.name, price: Number(d.price), image: d.image || '', desc: d.desc || '', addons: (d.addons || []).filter(a => a.name).map(a => ({ name: a.name, price: Number(a.price) || 0 })) })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } };
 if (JSON.stringify(payload).length > 900000) { this.showNotification('El menú pesa mucho. Usa fotos más pequeñas o menos platos'); return; }
 await window.FB.publishMenu(payload);
 this.showNotification('Menú publicado para los clientes');
@@ -1304,6 +1310,20 @@ return Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
 },
 
 dishPhotoUrl: '', dishPhotoMsg: '',
+itemSel: null, itemQty: 1, itemAddons: [],
+openItem(item) { this.itemSel = item; this.itemQty = 1; this.itemAddons = []; },
+toggleAddon(name) { const i = this.itemAddons.indexOf(name); if (i >= 0) this.itemAddons.splice(i, 1); else this.itemAddons.push(name); },
+get itemUnit() { if (!this.itemSel) return 0; let t = Number(this.itemSel.price) || 0; (this.itemSel.addons || []).forEach(a => { if (this.itemAddons.indexOf(a.name) >= 0) t += Number(a.price) || 0; }); return t; },
+get itemTotal() { return this.itemUnit * this.itemQty; },
+addItemToCart() {
+const it = this.itemSel; if (!it) return false;
+const chosen = (it.addons || []).filter(a => this.itemAddons.indexOf(a.name) >= 0);
+const detail = chosen.length ? 'Complementos: ' + chosen.map(a => a.name + (Number(a.price) > 0 ? ' (+' + this.formatMoney(a.price) + ')' : '')).join(', ') : '';
+this.customCart.push({ name: it.name, detail: detail, price: this.itemUnit, qty: this.itemQty });
+this.itemSel = null; return true;
+},
+buyItem() { if (this.addItemToCart()) this.openCheckout(); },
+addItemAndContinue() { if (this.addItemToCart()) this.showNotification('Agregado al pedido'); },
 pickDishPhoto(ev) {
 const f = ev.target.files && ev.target.files[0];
 this.dishPhotoMsg = '';
@@ -1327,13 +1347,14 @@ ev.target.value = '';
 openDishModal() {
 this.dishPhotoUrl = ''; this.dishPhotoMsg = '';
 this.editingDishId = null;
-this.dishForm = { name: '', price: 0, image: '', desc: '', recipe: [] };
+this.dishForm = { name: '', price: 0, image: '', desc: '', addons: [], recipe: [] };
 this.addRecipeRow();
 this.showDishModal = true;
 },
 editDish(dish) {
 this.editingDishId = dish.id;
 this.dishForm = JSON.parse(JSON.stringify(dish));
+if (!this.dishForm.addons) this.dishForm.addons = [];
 this.dishPhotoMsg = '';
 this.dishPhotoUrl = (this.dishForm.image && this.dishForm.image.indexOf('data:') !== 0) ? this.dishForm.image : '';
 this.showDishModal = true;
@@ -1343,6 +1364,7 @@ removeRecipeRow(index) { this.dishForm.recipe.splice(index, 1); },
 saveDish() {
 if (!this.dishForm.name.trim()) return;
 this.dishForm.recipe = this.dishForm.recipe.filter(r => r.ingredientId);
+this.dishForm.addons = (this.dishForm.addons || []).filter(a => String(a.name).trim()).map(a => ({ name: String(a.name).trim(), price: Number(a.price) || 0 }));
 if (this.editingDishId) {
 const index = this.dishes.findIndex(d => d.id === this.editingDishId);
 if (index !== -1) this.dishes[index] = { ...this.dishForm, id: this.editingDishId };
