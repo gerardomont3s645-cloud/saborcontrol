@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>SaborControl - Control de Costos y Ventas</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{brand:{50:'#f5f3ff',100:'#ede9fe',200:'#ddd6fe',400:'#a78bfa',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',800:'#5b21b6',900:'#4c1d95'}}}}}
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+[x-cloak]{display:none!important}
+@keyframes chefBounce{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-12px) rotate(4deg)}}
+@keyframes panFlip{0%,100%{transform:rotate(-18deg)}50%{transform:rotate(22deg) translateY(-6px)}}
+@keyframes steamUp{0%{opacity:0;transform:translateY(8px)}50%{opacity:.9}100%{opacity:0;transform:translateY(-22px)}}
+.chef{display:inline-block;font-size:84px;animation:chefBounce 1s ease-in-out infinite}
+.pan{position:absolute;font-size:40px;margin:46px 0 0 74px;animation:panFlip .8s ease-in-out infinite}
+.steam{position:absolute;font-size:20px;animation:steamUp 1.6s ease-in infinite}
+.steam.s1{margin:0 0 0 96px}.steam.s2{margin:0 0 0 62px;animation-delay:.8s}
+.fa-solid,.fa-regular{font-style:normal;display:inline-block;line-height:1}
+.fa-solid::before,.fa-regular::before{content:"•"}
+.fa-utensils::before{content:"🍴"}.fa-bolt::before{content:"⚡"}.fa-fire::before{content:"🔥"}
+.fa-plus::before{content:"＋"}.fa-plus-circle::before{content:"⊕"}.fa-brain::before{content:"🧠"}
+.fa-chart-line::before{content:"📈"}.fa-arrow-trend-up::before{content:"↗"}.fa-arrow-trend-down::before{content:"↘"}
+.fa-layer-group::before{content:"🧱"}.fa-boxes-packing::before{content:"📦"}.fa-triangle-exclamation::before{content:"⚠️"}
+.fa-pen::before{content:"✏️"}.fa-trash::before{content:"🗑️"}.fa-clock::before{content:"🕒"}
+.fa-basket-shopping::before{content:"🧺"}.fa-cash-register::before{content:"💵"}
+.fa-file-excel::before{content:"📄"}.fa-cart-shopping::before{content:"🛒"}.fa-bag-shopping::before{content:"🛍️"}
+.fa-chart-pie::before{content:"📊"}.fa-boxes-stacked::before{content:"📦"}.fa-burger::before{content:"🍔"}
+.fa-receipt::before{content:"🧾"}.fa-magnifying-glass::before{content:"🔍"}.fa-xmark::before{content:"✕"}.fa-circle-check::before{content:"✅"}
+nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7c3aed">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body class="h-full text-slate-800 flex flex-col max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white min-h-screen shadow-xl" x-data="appData()" x-init="initApp()">
+
+<!-- AVISO NUEVO PEDIDO -->
+<div x-show="newOrderBanner && (role === 'seller' || role === 'admin')" x-cloak @click="activeTab = 'orders'; newOrderBanner = null" class="fixed top-2 left-2 right-2 max-w-md mx-auto z-50 bg-amber-400 text-slate-900 font-bold text-sm rounded-xl p-3 shadow-2xl cursor-pointer">🔔 <span x-text="newOrderBanner"></span> — toca para ver</div>
+
+<!-- MODAL CAMBIAR DIRECCIÓN CLIENTE -->
+<div x-show="showAddressModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-3">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-sm">📍 Tu dirección de entrega</h3><button @click="showAddressModal = false" class="text-slate-400 text-lg">✕</button></div>
+<p class="text-xs text-slate-500">Escribe tu dirección exacta (barrio, colonia, referencias):</p>
+<textarea x-model="tempAddress" rows="3" placeholder="Ej: Bo. El Centro, frente a Farmacia Simán, casa blanca" class="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+<div class="flex justify-end space-x-2 pt-2">
+<button type="button" @click="showAddressModal = false" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
+<button type="button" @click="saveAddress()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md">Guardar Dirección</button>
+</div>
+</div>
+</div>
+
+<!-- CHECKOUT / METODO DE PAGO -->
+<div x-show="showCheckout" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-4 max-h-[92vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base">Método de pago</h3><button @click="showCheckout = false" class="text-slate-400 text-lg">✕</button></div>
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1">
+<div class="flex justify-between items-center"><span class="font-bold text-slate-700">📍 Entregar en:</span><button @click="openAddressModal()" class="text-brand-600 font-bold underline">Cambiar</button></div>
+<p class="text-slate-600" x-text="cust && cust.address ? cust.address : 'Sin dirección guardada'"></p>
+</div>
+<div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800">Total a pagar</span><strong class="text-brand-700" x-text="formatMoney(cartTotal)"></strong></div>
+<div class="grid grid-cols-2 gap-2">
+<button type="button" @click="payMethod = 'cash'" :class="payMethod === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700'" class="border-2 rounded-xl p-3 text-center font-bold text-xs"><span class="block text-3xl">💵</span>Efectivo</button>
+<button type="button" @click="payMethod = 'transfer'" :class="payMethod === 'transfer' ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-slate-200 bg-slate-50 text-slate-700'" class="border-2 rounded-xl p-3 text-center font-bold text-xs"><span class="block text-3xl">🏦</span>Transferencia bancaria</button>
+</div>
+<template x-if="payMethod === 'cash'"><div class="space-y-2">
+<label class="block text-xs font-bold text-slate-700">¿Con cuánto vas a pagar? / ¿Ocupas cambio?</label>
+<input type="number" inputmode="decimal" min="0" x-model="paidWith" placeholder="Ej: 100" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+<div class="flex flex-wrap gap-1.5"><template x-for="m in [50, 100, 200, 500]" :key="m"><button type="button" @click="paidWith = m" class="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700" x-text="'Lps. ' + m"></button></template></div>
+<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm font-bold" :class="String(paidWith) !== '' && changeDue < 0 ? 'text-rose-600' : 'text-emerald-800'" x-text="String(paidWith) === '' ? 'Escribe el monto con el que vas a pagar' : (changeDue >= 0 ? 'Tu cambio será de: ' + formatMoney(changeDue) : 'El monto no cubre el total (' + formatMoney(cartTotal) + ')')"></div>
+</div></template>
+<template x-if="payMethod === 'transfer'"><div class="space-y-3">
+<div class="bg-sky-50 border border-sky-200 rounded-xl p-3 text-xs text-slate-700 space-y-1">
+<p><strong>Titular:</strong> Junior Gerardo Montes Galindo</p>
+<p><strong>Identidad (ID):</strong> 0801-1997-139412</p>
+<p><strong>BAC:</strong> 7580-72551</p>
+<p><strong>Banco de Occidente:</strong> 21402-1227-384</p>
+<p><strong>Banpaís:</strong> 21-303-0135-227</p>
+</div>
+<label class="block w-full text-center bg-sky-600 text-white font-bold py-3 rounded-xl text-sm cursor-pointer">📎 Subir comprobante de pago<input type="file" accept="image/*,application/pdf" class="hidden" @change="pickProof($event)"></label>
+<p class="text-xs text-center" :class="proofName ? 'text-emerald-700 font-bold' : 'text-slate-400'" x-text="proofName ? '✔ ' + proofName : 'Falta subir el comprobante'"></p>
+</div></template>
+<p class="text-xs text-rose-600 text-center" x-text="checkoutMsg"></p>
+<button @click="sendOrder()" :disabled="!checkoutValid || busy" :class="checkoutValid && !busy ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed'" class="w-full text-white font-bold py-3 rounded-xl" x-text="busy ? 'Enviando...' : 'Finalizar pedido'"></button>
+</div>
+</div>
+
+<!-- COMPROBANTE (VENDEDORA) -->
+<div x-show="showProof" x-cloak class="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-md rounded-2xl p-4 space-y-3 max-h-[92vh] overflow-y-auto">
+<div class="flex justify-between items-center"><h3 class="font-bold text-slate-800 text-sm">Comprobante de pago</h3><button @click="showProof = false" class="text-slate-400 text-lg">✕</button></div>
+<p x-show="proofView.loading" class="text-xs text-slate-400 text-center py-4">Cargando...</p>
+<p x-show="proofView.err" class="text-xs text-rose-600 text-center py-4" x-text="proofView.err"></p>
+<template x-if="proofView.data && proofView.data.indexOf('data:image') === 0"><img :src="proofView.data" class="w-full rounded-xl border border-slate-200"></template>
+<template x-if="proofView.data && proofView.data.indexOf('data:image') !== 0"><p class="text-xs text-slate-600 text-center">Archivo PDF. Descárgalo para verlo.</p></template>
+<a x-show="proofView.data" :href="proofView.data" :download="proofView.name || 'comprobante'" class="block text-center bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs">⬇ Descargar comprobante</a>
+</div>
+</div>
+
+<!-- ARMA TU DESAYUNO -->
+<div x-show="showBuild" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base">⭐ Arma tu desayuno</h3><button @click="showBuild = false" class="text-slate-400 text-lg">✕</button></div>
+<p class="text-xs text-slate-500" x-text="'Incluye: 1 preparación de huevo + 3 complementos + acompañamiento. Precio: ' + formatMoney(buildBase)"></p>
+<div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Elige tu huevo <span class="text-rose-500">(obligatorio: 1)</span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="e in BUILD_EGGS" :key="e.name"><button type="button" @click="buildEgg = e.name" :class="buildEgg === e.name ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left" x-text="(buildEgg === e.name ? '◉ ' : '○ ') + e.name + (e.extra ? ' (+ ' + formatMoney(e.extra) + ')' : '')"></button></template></div></div>
+<div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Elige tus complementos <span class="text-rose-500" x-text="'(máximo 3) · ' + buildComps.length + '/3'"></span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="c in BUILD_COMPS" :key="c"><button type="button" @click="toggleComp(c)" :disabled="!buildComps.includes(c) && buildComps.length >= 3" :class="buildComps.includes(c) ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left disabled:opacity-40" x-text="(buildComps.includes(c) ? '✔ ' : '') + c"></button></template></div></div>
+<div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Acompañamiento <span class="text-rose-500">(obligatorio: 1)</span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="s in BUILD_SIDES" :key="s"><button type="button" @click="buildSide = s" :class="buildSide === s ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left" x-text="(buildSide === s ? '◉ ' : '○ ') + s"></button></template></div></div>
+<p class="text-xs text-rose-600 text-center" x-text="buildMsg"></p>
+<button @click="addBuild()" :disabled="!buildValid" :class="buildValid ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed'" class="w-full text-white font-bold py-3 rounded-xl" x-text="'Agregar al pedido • ' + formatMoney(buildPrice)"></button>
+</div>
+</div>
+
+<!-- ACCESO -->
+<div x-show="!role" x-cloak class="flex-1 min-h-screen bg-gradient-to-b from-brand-700 to-indigo-600 text-white p-6 flex flex-col justify-center space-y-4">
+<div class="text-center space-y-1"><div class="text-5xl">🍴</div><h1 class="text-2xl font-extrabold">SaborControl</h1><p class="text-sm text-brand-100">Desayunos &amp; Comidas Rápidas</p></div>
+<template x-if="authView === 'home'"><div class="space-y-3">
+<button @click="goAuth('custLogin')" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl shadow-md">🛒 Soy cliente</button>
+<button @click="goAuth('sellerLogin')" class="w-full bg-amber-400 text-slate-900 font-bold py-3 rounded-xl shadow-md">🧑‍🍳 Soy vendedora</button>
+<button @click="goAuth('adminLogin')" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl shadow-md">🔐 Administrador</button>
+</div></template>
+<template x-if="authView === 'custLogin'"><div class="space-y-3">
+<p class="text-sm text-center" x-text="cust ? 'Hola, ' + cust.name + '. Escribe tu clave.' : 'Primera vez: tu clave de acceso es 1234'"></p>
+<input type="password" inputmode="numeric" x-model="authPass" @keydown.enter="custEnter()" placeholder="Clave" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="custEnter()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Entrar</button>
+<button x-show="cust && cust.credId && webauthnOk" @click="bioEnter()" class="w-full bg-emerald-400 text-slate-900 font-bold py-3 rounded-xl">👆 Entrar con huella / patrón</button>
+<button x-show="cust" @click="goAuth('custReset'); resetPhone = ''; custForm.pass = ''" class="w-full text-xs text-amber-200 underline">Olvidé mi clave</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+<button @click="goAuth('home')" class="w-full text-xs text-brand-100 underline">Volver</button>
+</div></template>
+<template x-if="authView === 'custProfile'"><div class="space-y-3">
+<p class="text-sm text-center">Crea tu cuenta</p>
+<input type="text" x-model="custForm.name" placeholder="Tu nombre" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="tel" inputmode="numeric" x-model="custForm.phone" placeholder="Tu número de celular" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="text" x-model="custForm.address" placeholder="Tu dirección de entrega (Barrio, Col, Ref)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="password" x-model="custForm.pass" placeholder="Crea tu propia clave (mín. 4)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="custCreate()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Guardar y entrar</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+</div></template>
+<template x-if="authView === 'custReset'"><div class="space-y-3">
+<p class="text-sm text-center">Recuperar mi clave</p>
+<input type="tel" inputmode="numeric" x-model="resetPhone" placeholder="Tu celular registrado" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="password" x-model="custForm.pass" placeholder="Nueva clave (mín. 4)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="resetPass()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Guardar nueva clave y entrar</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+<button @click="goAuth('custLogin')" class="w-full text-xs text-brand-100 underline">Volver</button>
+</div></template>
+<template x-if="authView === 'sellerLogin'"><div class="space-y-3">
+<p class="text-sm text-center">Acceso de vendedoras</p>
+<input type="text" x-model="authName" placeholder="Tu nombre" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="password" x-model="authPass" @keydown.enter="sellerEnter()" placeholder="Clave" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="sellerEnter()" class="w-full bg-amber-400 text-slate-900 font-bold py-3 rounded-xl">Entrar</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+<button @click="goAuth('home')" class="w-full text-xs text-brand-100 underline">Volver</button>
+</div></template>
+<template x-if="authView === 'adminLogin'"><div class="space-y-3">
+<p class="text-sm text-center">Acceso de administrador</p>
+<input type="password" x-model="authPass" @keydown.enter="adminEnter()" placeholder="Clave" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<button @click="adminEnter()" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl">Entrar</button>
+<p class="text-xs text-amber-200 text-center" x-text="authError"></p>
+<button @click="goAuth('home')" class="w-full text-xs text-brand-100 underline">Volver</button>
+</div></template>
+</div>
+
+<!-- ================== CLIENTE ================== -->
+<div x-show="role === 'customer'" x-cloak class="flex-1 flex flex-col pb-20">
+<!-- HEADER CLIENTE -->
+<div class="bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white p-4 sticky top-0 z-30 shadow-md">
+<div class="flex justify-between items-center mb-2">
+<div><h1 class="font-extrabold text-lg">🍴 SaborControl</h1><p class="text-xs text-brand-100" x-text="cust ? 'Hola, ' + cust.name : ''"></p></div>
+<button @click="logout()" class="bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">Salir</button>
+</div>
+<!-- BARRA DE DIRECCIÓN -->
+<div class="bg-black/20 rounded-xl p-2.5 flex items-center justify-between text-xs">
+<div class="truncate mr-2"><span class="text-brand-200 font-bold">📍 Entregar en: </span><span class="text-white font-medium truncate" x-text="cust && cust.address ? cust.address : 'Toca para agregar dirección'"></span></div>
+<button @click="openAddressModal()" class="bg-white text-brand-800 font-extrabold px-2.5 py-1 rounded-lg shrink-0 active:scale-95 transition">✏️ Cambiar</button>
+</div>
+</div>
+
+<!-- VISTA 1: MENÚ / PLATOS (CLIENTE) -->
+<div x-show="custTab === 'menu'" class="p-4 space-y-4 flex-1">
+<!-- BANNER ARMA TU DESAYUNO -->
+<button @click="openBuild()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-2xl p-4 shadow-lg text-left active:scale-95 transition">
+<span class="block text-[10px] font-extrabold uppercase tracking-wider">⭐ Premium</span>
+<span class="block font-extrabold text-base">Arma tu desayuno a tu gusto</span>
+<span class="block text-sm font-bold" x-text="'Por ' + formatMoney(buildBase) + ' · huevo + 3 complementos + acompañamiento'"></span>
+</button>
+
+<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu desayuno personalizado</h3>
+<template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="c.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price)"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
+
+<div class="flex justify-between items-center pt-1"><h2 class="font-bold text-slate-800 text-base">Menú del Día</h2><span class="text-xs text-slate-400" x-text="menuItems.length + ' opciones'"></span></div>
+
+<!-- CUADRÍCULA DE PLATOS CON FOTO -->
+<template x-if="menuItems.length === 0"><p class="text-xs text-slate-400 bg-slate-50 rounded-xl p-4 text-center">El menú aún no está disponible. Intenta más tarde.</p></template>
+<div class="grid grid-cols-2 gap-3">
+<template x-for="item in menuItems" :key="item.name">
+<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition">
+<div class="relative h-28 bg-slate-100 flex items-center justify-center overflow-hidden">
+<template x-if="item.image"><img :src="item.image" class="w-full h-full object-cover"></template>
+<template x-if="!item.image"><span class="text-4xl">🍳</span></template>
+</div>
+<div class="p-3 flex-1 flex flex-col justify-between space-y-2">
+<div>
+<p class="font-bold text-slate-800 text-xs line-clamp-1" x-text="item.name"></p>
+<p class="text-[11px] text-slate-400 line-clamp-1" x-text="item.desc || 'Desayuno fresco hecho al momento'"></p>
+<p class="text-xs text-brand-600 font-extrabold mt-1" x-text="formatMoney(item.price)"></p>
+</div>
+<div class="flex items-center justify-between pt-1">
+<button @click="changeQty(item, -1)" class="w-7 h-7 rounded-lg bg-slate-100 font-bold text-slate-700 active:bg-slate-200">−</button>
+<span class="text-xs font-bold" x-text="cart[item.name] || 0"></span>
+<button @click="changeQty(item, 1)" class="w-7 h-7 rounded-lg bg-brand-600 text-white font-bold active:bg-brand-700">+</button>
+</div>
+</div>
+</div>
+</template>
+</div>
+
+<!-- NOTA DEL PEDIDO -->
+<div>
+<label class="block text-xs font-bold text-slate-700 mb-1">Notas especiales o detalles para la cocina</label>
+<textarea x-model="orderNote" rows="2" placeholder="Ej: Baleada sin mantequilla, huevo bien cocido..." class="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+</div>
+
+<!-- TOTAL Y CONFIRMAR -->
+<div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800 font-bold">Total a pagar</span><strong class="text-brand-700 text-base" x-text="formatMoney(cartTotal)"></strong></div>
+<button @click="openCheckout()" :disabled="busy || cartTotal <= 0" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl shadow-md flex items-center justify-center space-x-2"><span>🛒 Confirmar compra</span><span x-text="'(' + formatMoney(cartTotal) + ')'"></span></button>
+<p class="text-xs text-rose-600 text-center" x-text="orderMsg"></p>
+
+<!-- CUENTA / CLAVE -->
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1 mt-4">
+<p class="font-bold text-slate-700">Mi Perfil</p>
+<p x-text="cust ? 'Nombre: ' + cust.name : ''"></p>
+<p x-text="cust ? 'Celular: ' + cust.phone : ''"></p>
+<p x-show="cust && webauthnOk"><button @click="cust && cust.credId ? null : enableBio()" class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg" x-text="cust && cust.credId ? '👆 Huella / patrón activado' : '👆 Activar huella / patrón'"></button></p>
+<p><button @click="showCustPass = !showCustPass" class="text-brand-600 underline" x-text="showCustPass ? 'Ocultar clave' : 'Ver mi clave'"></button> <strong x-show="showCustPass" x-text="cust ? cust.pass : ''"></strong></p>
+</div>
+</div>
+
+<!-- VISTA 2: MI PEDIDO / ESTADO (CLIENTE) -->
+<div x-show="custTab === 'status'" class="p-5 space-y-4 flex-1">
+<h2 class="font-bold text-slate-800 text-base">Estado de tu Pedido</h2>
+<template x-if="!currentOrder"><div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2"><span class="text-4xl block">🍳</span><p class="text-sm font-bold text-slate-700">No tienes pedidos en curso</p><p class="text-xs text-slate-400">Pide tu desayuno desde la pestaña Menú</p><button @click="custTab = 'menu'" class="mt-2 bg-brand-600 text-white font-bold px-4 py-2 rounded-xl text-xs">Ir al Menú</button></div></template>
+<template x-if="currentOrder">
+<div class="space-y-4">
+<div class="bg-gradient-to-b from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-6 text-center space-y-4 shadow-sm">
+<div class="relative h-28 flex items-center justify-center"><span class="chef">👩‍🍳</span><span class="pan">🍳</span><span class="steam s1">♨️</span><span class="steam s2">♨️</span></div>
+<div>
+<p class="text-lg font-extrabold text-slate-800">Golosa</p>
+<p class="text-xs text-slate-600">está preparando tu comida con amor</p>
+</div>
+<div class="bg-white rounded-2xl p-4 shadow-sm space-y-2 border border-amber-100">
+<p class="text-xs text-slate-500 font-bold" x-text="remainingSecs > 0 ? 'Tiempo estimado: ' + etaMinutes + ' minutos' : timerMsg"></p>
+<p class="text-4xl font-extrabold text-brand-700 tabular-nums" x-text="timerText"></p>
+<div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 transition-all duration-500" :style="'width:' + prepPct + '%'"></div></div>
+</div>
+<div class="inline-block px-3 py-1 rounded-full text-xs font-bold" :class="orderStatus === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : (orderStatus === 'delivered' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-800')" x-text="orderStatus === 'confirmed' ? '✅ En preparación' : (orderStatus === 'delivered' ? '🎉 ¡Entregado!' : '⏳ Pendiente de confirmación')"></div>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 text-xs">
+<div class="flex justify-between items-center border-b pb-2"><span class="font-bold text-slate-700">Detalles de entrega</span><span class="text-slate-400" x-text="formatDateTime(new Date(currentOrder.createdAt).toISOString())"></span></div>
+<p><strong>Destino: </strong><span x-text="currentOrder.address || 'Sin dirección'"></span></p>
+<p><strong>Productos: </strong><span x-text="itemsText(currentOrder)"></span></p>
+<div class="flex justify-between pt-1 border-t text-sm font-bold"><span class="text-slate-700">Total:</span><span class="text-brand-700" x-text="formatMoney(currentOrder.total)"></span></div>
+</div>
+<a :href="waLink(currentOrder)" target="_blank" class="block bg-green-500 text-white font-bold py-3 rounded-xl text-xs text-center shadow-sm">📲 Consultar por WhatsApp</a>
+</div>
+</template>
+</div>
+
+<!-- VISTA 3: HISTORIAL DE COMPRAS (CLIENTE) -->
+<div x-show="custTab === 'history'" class="p-4 space-y-3 flex-1">
+<h2 class="font-bold text-slate-800 text-base">🧾 Historial de compras</h2>
+<template x-if="myOrders.length === 0"><p class="text-center py-10 text-xs text-slate-400">Aún no tienes pedidos registrados.</p></template>
+<template x-for="o in myOrders" :key="o.id">
+<div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 text-xs shadow-sm">
+<div class="flex justify-between items-center"><span class="font-bold text-slate-800" x-text="'Pedido #' + (o.id ? o.id.slice(-5) : '')"></span><span class="font-bold px-2 py-0.5 rounded-full" :class="o.status === 'rejected' ? 'bg-rose-100 text-rose-700' : (o.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')" x-text="statusLabel(o.status)"></span></div>
+<p class="text-[11px] text-slate-400" x-text="formatDateTime(new Date(o.createdAt).toISOString())"></p>
+<template x-for="(it, k) in o.items" :key="k"><p class="text-slate-800" x-text="it.qty + ' x ' + it.name"></p></template>
+<p x-show="o.address" class="text-slate-500" x-text="'📍 ' + o.address"></p>
+<div class="flex justify-between pt-2 border-t border-slate-100"><span class="text-slate-500" x-text="'Pago: ' + payLabel(o)"></span><strong class="text-brand-700 font-extrabold" x-text="formatMoney(o.total)"></strong></div>
+</div>
+</template>
+</div>
+
+<!-- BARRA DE NAVEGACIÓN INFERIOR (CLIENTE) -->
+<nav class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
+<button @click="custTab = 'menu'" :class="custTab === 'menu' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🍔</span><span>Menú / Platos</span></button>
+<button @click="custTab = 'status'" :class="custTab === 'status' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="relative flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🔔</span><span>Mi Pedido</span><span x-show="orderSent && orderStatus !== 'delivered'" class="absolute -top-0.5 right-2 w-2 h-2 rounded-full bg-emerald-500"></span></button>
+<button @click="custTab = 'history'" :class="custTab === 'history' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🧾</span><span>Historial</span></button>
+</nav>
+</div>
+
+<!-- ================== VENDEDORA / ADMIN ================== -->
+<header x-show="role === 'seller' || role === 'admin'" x-cloak class="bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white p-4 sticky top-0 z-30 shadow-md">
+<div class="flex justify-between items-center">
+<div class="flex items-center space-x-2">
+<div class="bg-white/20 p-2 rounded-xl"><i class="fa-solid fa-utensils text-xl"></i></div>
+<div>
+<h1 class="font-extrabold text-lg leading-tight tracking-wide">SaborControl</h1>
+<p class="text-xs text-brand-100 flex items-center gap-1">Desayunos &amp; Comidas Rápidas <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span></p>
+</div>
+</div>
+<div class="flex items-center space-x-2"><button @click="logout()" class="bg-white/20 text-white px-2 h-9 rounded-lg text-xs font-bold">Salir</button><button @click="openSearch()" aria-label="Buscar" class="bg-white/20 hover:bg-white/30 text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-md active:scale-95 transition"><i class="fa-solid fa-magnifying-glass text-base"></i></button>
+<button @click="openQuickSaleModal()" class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center shadow-md active:scale-95 transition"><i class="fa-solid fa-bolt mr-1 text-sm"></i> Venta Rápida</button></div>
+</div>
+</header>
+
+<main x-show="role === 'seller' || role === 'admin'" x-cloak class="flex-1 overflow-y-auto pb-28 p-4 space-y-5">
+
+<!-- DASHBOARD -->
+<div x-show="activeTab === 'dashboard'" x-cloak class="space-y-5">
+<div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
+<div class="flex justify-between items-center mb-3">
+<span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">Resumen de Hoy</span>
+<span class="text-xs bg-brand-500/30 text-brand-200 px-2.5 py-0.5 rounded-full border border-brand-400/20" x-text="todayDateFormatted()"></span>
+</div>
+<div class="grid grid-cols-3 gap-2 text-center">
+<div class="bg-white/5 p-2.5 rounded-xl border border-white/5"><p class="text-[10px] uppercase text-emerald-400 font-bold">Ventas</p><p class="text-base font-extrabold text-emerald-300" x-text="formatMoney(todayStats.sales)"></p></div>
+<div class="bg-white/5 p-2.5 rounded-xl border border-white/5"><p class="text-[10px] uppercase text-rose-400 font-bold">Gastos</p><p class="text-base font-extrabold text-rose-300" x-text="formatMoney(todayStats.expenses)"></p></div>
+<div class="bg-white/5 p-2.5 rounded-xl border border-white/5"><p class="text-[10px] uppercase text-amber-400 font-bold">Ganancia Neta</p><p class="text-base font-extrabold" :class="todayStats.netProfit >= 0 ? 'text-amber-300' : 'text-rose-400'" x-text="formatMoney(todayStats.netProfit)"></p></div>
+</div>
+</div>
+
+<div class="grid grid-cols-2 gap-2.5">
+<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center"><p class="text-[10px] uppercase text-emerald-700 font-bold">Unidades vendidas hoy</p><p class="text-lg font-extrabold text-emerald-700" x-text="todayExtra.units"></p></div>
+<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p class="text-[10px] uppercase text-amber-700 font-bold">Ganancia de recetas hoy</p><p class="text-lg font-extrabold text-amber-700" x-text="formatMoney(todayExtra.profit)"></p></div>
+</div>
+
+<div>
+<h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center"><i class="fa-solid fa-fire mr-1.5"></i> Platos Populares (Venta Rápida)</h3>
+<div class="grid grid-cols-2 gap-2.5">
+<template x-for="dish in dishes.slice(0, 4)" :key="dish.id">
+<button @click="quickSell(dish)" class="bg-white border border-slate-200 hover:border-brand-400 p-3 rounded-xl flex items-center justify-between shadow-sm active:bg-brand-50 transition text-left group">
+<div class="truncate mr-2"><p class="font-bold text-slate-800 text-sm truncate" x-text="dish.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(dish.price)"></p></div>
+<span class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-plus text-xs"></i></span>
+</button>
+</template>
+</div>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+<div class="flex items-center justify-between">
+<h2 class="font-bold text-slate-800 text-sm flex items-center"><i class="fa-solid fa-cash-register mr-1.5"></i> Ventas y ganancia por producto</h2>
+</div>
+<div class="flex space-x-1 bg-slate-200/60 p-1 rounded-xl text-xs font-medium">
+<button @click="prodFilter = 'today'" :class="prodFilter === 'today' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Hoy</button>
+<button @click="prodFilter = 'week'" :class="prodFilter === 'week' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Semana</button>
+<button @click="prodFilter = 'month'" :class="prodFilter === 'month' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Mes</button>
+<button @click="prodFilter = 'all'" :class="prodFilter === 'all' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'" class="flex-1 py-1.5 rounded-lg text-center transition">Todos</button>
+</div>
+<div class="space-y-2">
+<template x-for="p in salesByProduct" :key="p.name">
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+<div class="flex justify-between items-center mb-1.5">
+<span class="font-bold text-slate-800 text-sm" x-text="p.name"></span>
+<span class="text-[11px] font-bold bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full" x-text="p.units + ' vendido(s)'"></span>
+</div>
+<div class="grid grid-cols-2 gap-2 text-center">
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Vendido</span><span class="text-xs font-bold text-slate-700" x-text="formatMoney(p.total)"></span></div>
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Ganancia</span><span class="text-xs font-extrabold" :class="p.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'" x-text="formatMoney(p.profit)"></span></div>
+</div>
+</div>
+</template>
+<template x-if="salesByProduct.length === 0"><p class="text-center py-4 text-xs text-slate-400">No hay ventas en este periodo.</p></template>
+</div>
+</div>
+</div>
+
+<!-- INSUMOS -->
+<div x-show="activeTab === 'ingredients'" x-cloak class="space-y-4">
+<div class="flex justify-between items-center">
+<div><h2 class="font-bold text-slate-800 text-base">Inventario de Insumos</h2><p class="text-xs text-slate-500">Registra compras y costos</p></div>
+<button x-show="role === 'admin'" @click="openIngredientModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center shadow-md"><i class="fa-solid fa-plus mr-1"></i> Nuevo Insumo</button>
+</div>
+<div class="space-y-3">
+<template x-for="item in ingredients" :key="item.id">
+<div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm">
+<div class="flex justify-between items-start mb-2">
+<div><h3 class="font-bold text-slate-800 text-sm" x-text="item.name"></h3><p class="text-xs text-slate-500" x-text="'Comprado: ' + formatDate(item.purchaseDate)"></p></div>
+<div class="flex space-x-1">
+<button @click="editIngredient(item)" class="text-slate-400 hover:text-brand-600 p-1 rounded-md text-xs"><i class="fa-solid fa-pen"></i></button>
+<button @click="deleteIngredient(item.id)" class="text-slate-400 hover:text-rose-600 p-1 rounded-md text-xs"><i class="fa-solid fa-trash"></i></button>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Costo Total</span><span class="text-xs font-bold text-slate-700" x-text="formatMoney(item.totalCost)"></span></div>
+<div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Rendimiento</span><span class="text-xs font-bold text-slate-700" x-text="item.units + ' ' + item.unitType"></span></div>
+<div class="bg-brand-50 rounded-lg p-0.5 border border-brand-100"><span class="text-[10px] text-brand-700 uppercase font-bold block">Costo Unitario</span><span class="text-xs font-extrabold text-brand-700" x-text="formatMoney(item.totalCost / item.units) + ' / ' + item.unitType"></span></div>
+</div>
+</div>
+</template>
+</div>
+</div>
+
+<!-- GESTOR PLATOS (ADMIN / SELLER) -->
+<div x-show="activeTab === 'dishes'" x-cloak class="space-y-4">
+<div class="flex justify-between items-center">
+<div><h2 class="font-bold text-slate-800 text-base">Menú y Recetas</h2><p class="text-xs text-slate-500">Administra fotos, platos y precios</p></div>
+<button x-show="role === 'admin'" @click="openDishModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center shadow-md"><i class="fa-solid fa-plus mr-1"></i> Nuevo Plato</button>
+</div>
+<button x-show="role === 'admin'" @click="publishMenu()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow-md">📣 Publicar Menú y Fotos al Cliente</button>
+<div class="space-y-3">
+<template x-for="dish in dishes" :key="dish.id">
+<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex space-x-3 items-center">
+<div class="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+<template x-if="dish.image"><img :src="dish.image" class="w-full h-full object-cover"></template>
+<template x-if="!dish.image"><span class="text-2xl">🍽️</span></template>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-bold text-slate-800 text-sm truncate" x-text="dish.name"></h3>
+<p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(dish.price)"></p>
+<p class="text-[10px] text-slate-400 truncate" x-text="dish.desc || 'Sin descripción'"></p>
+</div>
+<div class="flex space-x-1 shrink-0">
+<button @click="openSellModal(dish)" class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg text-xs font-bold">Vender</button>
+<button x-show="role === 'admin'" @click="editDish(dish)" class="text-slate-400 p-1 text-xs">✏️</button>
+<button x-show="role === 'admin'" @click="deleteDish(dish.id)" class="text-slate-400 p-1 text-xs">🗑️</button>
+</div>
+</div>
+</template>
+</div>
+</div>
+
+<!-- PEDIDOS EN LINEA (VENDEDORA) -->
+<div x-show="activeTab === 'orders'" x-cloak class="space-y-4">
+<div><h2 class="font-bold text-slate-800 text-base">Pedidos en línea</h2><p class="text-xs text-slate-500">Pedidos de clientes por atender y despachar</p></div>
+<template x-if="pendingOrders.length === 0"><p class="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-300">No hay pedidos pendientes.</p></template>
+<template x-for="o in pendingOrders" :key="o.id">
+<div class="bg-amber-50 border border-amber-300 rounded-2xl p-4 space-y-2.5 shadow-sm">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-bold text-slate-800 text-sm" x-text="o.customerName"></p>
+<p class="text-xs text-slate-600 font-bold" x-text="'📞 ' + o.phone"></p>
+<p class="text-[11px] text-slate-500" x-text="'🕒 ' + formatDateTime(new Date(o.createdAt).toISOString())"></p>
+</div>
+<span class="font-extrabold text-brand-700 text-base" x-text="formatMoney(o.total)"></span>
+</div>
+
+<div class="bg-white/80 border border-amber-200 rounded-xl p-2.5 text-xs text-slate-700 space-y-1">
+<p><strong class="text-rose-700">📍 Dirección:</strong> <span class="font-bold text-slate-800" x-text="o.address || 'Sin dirección registrada'"></span></p>
+<p><strong>Pedido:</strong> <span x-text="itemsText(o)"></span></p>
+<p x-show="o.note"><strong>Nota:</strong> <span x-text="o.note"></span></p>
+</div>
+
+<template x-if="o.payMethod === 'cash'">
+<div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-xs">
+<span class="font-bold text-emerald-800">💵 Pago en Efectivo</span><br>
+<span class="text-slate-700" x-text="'Llevar cambio de: ' + formatMoney(o.change) + ' (Paga con: ' + formatMoney(o.paidWith) + ')'"></span>
+</div>
+</template>
+
+<template x-if="o.payMethod === 'transfer'">
+<div class="bg-sky-50 border border-sky-200 rounded-lg p-2.5 text-xs space-y-1.5">
+<span class="font-bold text-sky-800">🏦 Pago por Transferencia</span>
+<div class="flex space-x-2">
+<button @click="viewProof(o)" class="flex-1 bg-white border border-sky-300 text-sky-700 font-bold py-1.5 rounded-lg">👁 Ver comprobante</button>
+<button @click="markPaid(o)" :disabled="o.paid" :class="o.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-600 text-white'" class="flex-1 font-bold py-1.5 rounded-lg" x-text="o.paid ? '✔ Pago recibido' : 'Confirmar pago recibido'"></button>
+</div>
+</div>
+</template>
+
+<div class="flex items-center space-x-2">
+<label class="text-[11px] font-bold text-slate-600">Tiempo estimado:</label>
+<input type="number" inputmode="numeric" min="1" :value="o.prepMinutes || 15" @input="etaInputs[o.id] = $event.target.value" class="w-16 text-base p-1.5 border border-slate-300 rounded-lg text-center font-bold">
+<span class="text-xs text-slate-500">min</span>
+<button @click="updateEta(o)" class="flex-1 bg-brand-600 text-white font-bold py-1.5 rounded-lg text-xs">Actualizar tiempo</button>
+</div>
+
+<div class="flex space-x-2 pt-1">
+<button @click="confirmOrder(o)" :disabled="o.payMethod === 'transfer' && !o.paid" class="flex-1 bg-emerald-600 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl text-xs">✔ Confirmar Pedido</button>
+<button @click="rejectOrder(o)" class="flex-1 bg-rose-100 text-rose-700 font-bold py-2.5 rounded-xl text-xs">✖ Rechazar</button>
+</div>
+</div>
+</template>
+
+<div><h2 class="font-bold text-slate-800 text-base mt-6">Pedidos activos / entregados hoy</h2></div>
+<template x-if="confirmedToday.length === 0"><p class="text-center py-4 text-xs text-slate-400">Aún no hay pedidos confirmados hoy.</p></template>
+<template x-for="o in confirmedToday" :key="o.id">
+<div class="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-bold text-slate-800 text-xs" x-text="o.customerName + ' (' + (o.address || 'Sin dir.') + ')'"></p>
+<p class="text-[11px] text-slate-500" x-text="itemsText(o)"></p>
+<p class="text-[10px] text-slate-400" x-text="payLabel(o) + ' · ' + statusLabel(o.status)"></p>
+</div>
+<span class="font-extrabold text-emerald-600 text-xs" x-text="'+ ' + formatMoney(o.total)"></span>
+</div>
+<template x-if="o.status === 'confirmed'">
+<button @click="markDelivered(o)" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs">📦 Marcar entregado</button>
+</template>
+</div>
+</template>
+</div>
+
+<!-- HISTORIAL STAFF -->
+<div x-show="activeTab === 'history'" x-cloak class="space-y-4">
+<div class="flex justify-between items-center"><div><h2 class="font-bold text-slate-800 text-base">Historial</h2><p class="text-xs text-slate-500">Ventas registradas</p></div>
+<button x-show="role === 'admin'" @click="exportToCSV()" class="bg-slate-800 text-white font-bold px-3 py-2 rounded-xl text-xs">Exportar CSV</button></div>
+<div class="space-y-2">
+<template x-for="log in filteredHistory" :key="log.id">
+<div class="bg-white border border-slate-200 p-3 rounded-xl flex justify-between items-center text-xs">
+<div><p class="font-bold text-slate-800" x-text="log.description"></p><p class="text-[10px] text-slate-400" x-text="formatDateTime(log.date)"></p></div>
+<span class="font-extrabold" :class="log.type === 'sale' ? 'text-emerald-600' : 'text-rose-600'" x-text="(log.type === 'sale' ? '+ ' : '- ') + formatMoney(log.amount)"></span>
+</div>
+</template>
+</div>
+</div>
+</main>
+
+<!-- NAVEGACIÓN INFERIOR (STAFF) -->
+<nav x-show="role === 'seller' || role === 'admin'" x-cloak class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
+<button @click="activeTab = 'orders'" :class="activeTab === 'orders' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="relative flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🔔</span><span>Pedidos</span><span x-show="pendingOrders.length > 0" class="absolute -top-0.5 right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full px-1.5" x-text="pendingOrders.length"></span></button>
+<button x-show="role === 'admin'" @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-chart-pie text-lg mb-0.5"></i><span>Diagnóstico</span></button>
+<button x-show="role === 'admin'" @click="activeTab = 'ingredients'" :class="activeTab === 'ingredients' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-boxes-stacked text-lg mb-0.5"></i><span>Insumos</span></button>
+<button @click="activeTab = 'dishes'" :class="activeTab === 'dishes' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-burger text-lg mb-0.5"></i><span>Menú / Platos</span></button>
+<button @click="activeTab = 'history'" :class="activeTab === 'history' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-receipt text-lg mb-0.5"></i><span>Historial</span></button>
+</nav>
+
+<!-- MODAL PLATO (CON FOTO Y DESCRIPCIÓN) -->
+<div x-show="showDishModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+<div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base" x-text="editingDishId ? 'Editar Plato' : 'Nuevo Plato'"></h3><button @click="showDishModal = false" class="text-slate-400 text-lg">✕</button></div>
+<form @submit.prevent="saveDish()" class="space-y-3">
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Nombre del Plato</label>
+<input type="text" x-model="dishForm.name" required placeholder="Ej: Baleada con Todo, Desayuno Típico" class="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none"></div>
+<div class="grid grid-cols-2 gap-2">
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Precio Venta (Lps)</label>
+<input type="number" inputmode="decimal" step="0.01" x-model.number="dishForm.price" required placeholder="60.00" class="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-1">URL de la Foto</label>
+<input type="url" x-model="dishForm.image" placeholder="https://..." class="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none"></div>
+</div>
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Descripción breve para el cliente</label>
+<input type="text" x-model="dishForm.desc" placeholder="Ej: Incluye frijoles, queso y mantequilla" class="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none"></div>
+<div class="flex justify-end space-x-2 pt-2 border-t">
+<button type="button" @click="showDishModal = false" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500">Cancelar</button>
+<button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold shadow-md">Guardar Plato</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- TOAST -->
+<div x-show="toast.show" x-cloak class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-2xl z-50 flex items-center space-x-2 border border-slate-700 max-w-[90%]">
+<i class="fa-solid fa-circle-check text-base"></i><span x-text="toast.message"></span>
+</div>
+
+<script>
+function appData() {
+return {
+activeTab: 'orders',
+custTab: 'menu',
+showAddressModal: false,
+tempAddress: '',
+historyFilter: 'today',
+showIngredientModal: false,
+showDishModal: false,
+showQuickSaleModal: false,
+editingIngredientId: null,
+editingDishId: null,
+toast: { show: false, message: '' },
+showSearchModal: false,
+searchQuery: '',
+dishSearch: '',
+prodFilter: 'today',
+showSellModal: false,
+sellDish: null,
+sellQty: 1,
+
+openAddressModal() {
+this.tempAddress = (this.cust && this.cust.address) || '';
+this.showAddressModal = true;
+},
+saveAddress() {
+if (!this.tempAddress.trim()) { this.showNotification('Por favor escribe tu dirección'); return; }
+if (this.cust) {
+this.cust.address = this.tempAddress.trim();
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+}
+this.showAddressModal = false;
+this.showNotification('Dirección guardada');
+},
+
+openSellModal(dish) { this.sellDish = dish; this.sellQty = 1; this.showSellModal = true; },
+confirmSell() {
+const dish = this.sellDish;
+if (!dish) return;
+const qty = Math.max(1, Math.floor(Number(this.sellQty)) || 1);
+const price = parseFloat(dish.price) || 0;
+this.history.unshift({ id: Date.now().toString(), type: 'sale', description: 'Venta: ' + qty + ' x ' + dish.name, amount: price * qty, qty: qty, cost: this.calculateDishCost(dish) * qty, date: new Date().toISOString() });
+this.saveHistory();
+this.showSellModal = false;
+this.showNotification(qty + ' x ' + dish.name + ' vendido(s)');
+},
+get filteredDishes() { return this.dishes; },
+get salesByProduct() { return []; },
+get salesByProductTotals() { return { units: 0, total: 0, profit: 0 }; },
+get todayExtra() { return { units: 0, profit: 0 }; },
+openSearch() { this.showSearchModal = true; },
+goToSearchResult(tab) { this.activeTab = tab; this.showSearchModal = false; },
+normalizeText(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); },
+get searchResults() { return { ingredients: [], dishes: [], history: [], total: 0 }; },
+
+ingredients: [], dishes: [], history: [],
+ingredientForm: { name: '', totalCost: 0, units: 1, unitType: 'unidades', durabilityDays: 7 },
+dishForm: { name: '', price: 0, image: '', desc: '', recipe: [] },
+
+initApp() {
+this.loadStoredData(); this.loadBuild();
+try {
+const s = localStorage.getItem('sabor_customer');
+if (s) {
+this.cust = JSON.parse(s);
+if (this.cust && !this.cust.address) this.cust.address = '';
+}
+} catch (e) {}
+const go = () => this.fbInit();
+if (window.FB) go(); else window.addEventListener('fb-ready', go);
+},
+role: null, authView: 'home', authName: '', authPass: '', authError: '', sellerName: '',
+cust: null, custForm: { name: '', phone: '', pass: '', address: '' }, showCustPass: false,
+menuItems: [], menuInfo: { address: '' }, cart: {}, orderNote: '', orderSent: null, orderMsg: '', myOrders: [], busy: false,
+orders: [], newOrderBanner: null, audioCtx: null, unsubs: [],
+WA: '50494149886',
+SELLER_HASH: '495524c206230edb763905976e5aa95547e2e188141964663e397d9acdccbe34', ADMIN_HASH: 'f0f7e7adad0ca73a4a6b93620cb1767fdc062e946cf538beab9e4a2d15e189e7',
+async sha(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); },
+fbInit() {
+window.FB.watchMenu(m => {
+this.menuItems = m.items || [];
+this.menuInfo = Object.assign({ address: '' }, m.info || {});
+this.menuBuild = m.build || { price: 60, options: [] };
+});
+},
+goAuth(v) { this.authView = v; this.authPass = ''; this.authError = ''; },
+custEnter() {
+if (this.cust) {
+if (this.authPass === this.cust.pass) { this.startCustomer(); } else { this.authError = 'Clave incorrecta'; }
+} else if (this.authPass === '1234') { this.authView = 'custProfile'; this.authError = ''; }
+else { this.authError = 'Clave incorrecta'; }
+},
+custCreate() {
+const f = this.custForm;
+const phone = String(f.phone).replace(/\D/g, '');
+if (!f.name.trim()) { this.authError = 'Escribe tu nombre'; return; }
+if (phone.length < 8) { this.authError = 'Escribe un celular válido'; return; }
+if (String(f.pass).length < 4 || f.pass === '1234') { this.authError = 'Crea una clave de 4 o más caracteres (distinta de 1234)'; return; }
+this.cust = { name: f.name.trim(), phone: phone, pass: f.pass, address: (f.address || '').trim() };
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.startCustomer();
+},
+resetPhone: '',
+showCheckout: false, payMethod: '', paidWith: '', proofData: '', proofName: '', checkoutMsg: '', showMyOrders: false,
+showProof: false, proofView: { loading: false, err: '', data: '', name: '' }, etaInputs: {},
+statusLabel(s) { return { pending: 'Esperando confirmación', confirmed: 'En preparación', delivered: 'Entregado', rejected: 'Rechazado' }[s] || s; },
+payLabel(o) { return o.payMethod === 'cash' ? 'Efectivo' : (o.payMethod === 'transfer' ? 'Transferencia' : 'No indicado'); },
+async markPaid(o) {
+try { await window.FB.updateOrder(o.id, { paid: true, paidAt: Date.now() }); this.showNotification('Pago confirmado'); } catch (e) { this.showNotification('No se pudo confirmar'); }
+},
+async viewProof(o) {
+this.proofView = { loading: true, err: '', data: '', name: '' }; this.showProof = true;
+if (!o.proofId) { this.proofView = { loading: false, err: 'Sin comprobante', data: '', name: '' }; return; }
+try {
+const p = await window.FB.getProof(o.proofId);
+this.proofView = p ? { loading: false, err: '', data: p.data, name: p.name } : { loading: false, err: 'No se encontró', data: '', name: '' };
+} catch (e) { this.proofView = { loading: false, err: 'Error al cargar', data: '', name: '' }; }
+},
+async updateEta(o) {
+const m = parseInt(this.etaInputs[o.id] !== undefined ? this.etaInputs[o.id] : (o.prepMinutes || 15));
+if (!m || m < 1 || m > 180) { this.showNotification('Minutos entre 1 y 180'); return; }
+try { await window.FB.updateOrder(o.id, { prepMinutes: m, etaAt: Date.now() + m * 60000 }); this.showNotification('Tiempo actualizado: ' + m + ' min'); } catch (e) { this.showNotification('Error al actualizar'); }
+},
+async markDelivered(o) {
+try { await window.FB.updateOrder(o.id, { status: 'delivered', deliveredAt: Date.now() }); this.showNotification('Pedido entregado'); } catch (e) { this.showNotification('Error'); }
+},
+build: { price: 60, options: [] }, menuBuild: { price: 60, options: [] },
+customCart: [], showBuild: false, buildMsg: '', showThanks: false, nowTs: Date.now(), timerId: null,
+loadBuild() { try { const b = localStorage.getItem('sabor_build'); if (b) this.build = JSON.parse(b); } catch (e) {} },
+saveBuild() { try { localStorage.setItem('sabor_build', JSON.stringify(this.build)); } catch (e) {} },
+
+BUILD_EGGS: [{ name: 'Huevo picado', extra: 0 }, { name: 'Huevo en torta', extra: 0 }, { name: 'Huevo con tomate y cebolla', extra: 0 }, { name: 'Huevo cocido', extra: 0 }, { name: 'Huevo picado con chorizo', extra: 15 }],
+BUILD_COMPS: ['Frijoles fritos', 'Frijoles parados', 'Frijoles salteados', 'Plátano maduro', 'Mantequilla', 'Queso', 'Quesillo', 'Aguacate'],
+BUILD_SIDES: ['Tortillas de maíz (2 uds.)', 'Pan blanco'],
+buildEgg: '', buildComps: [], buildSide: '',
+openBuild() { this.buildEgg = ''; this.buildComps = []; this.buildSide = ''; this.buildMsg = ''; this.showBuild = true; },
+toggleComp(c) {
+const i = this.buildComps.indexOf(c);
+if (i >= 0) { this.buildComps.splice(i, 1); this.buildMsg = ''; }
+else if (this.buildComps.length >= 3) { this.buildMsg = 'Máximo 3 complementos'; }
+else { this.buildComps.push(c); this.buildMsg = ''; }
+},
+get buildBase() { return Number(this.menuBuild && this.menuBuild.price) || 60; },
+get buildPrice() { const e = this.BUILD_EGGS.find(x => x.name === this.buildEgg); return this.buildBase + (e ? e.extra : 0); },
+get buildValid() { return !!this.buildEgg && this.buildComps.length >= 1 && this.buildComps.length <= 3 && !!this.buildSide; },
+addBuild() {
+if (!this.buildValid) { this.buildMsg = 'Elige 1 huevo, de 1 a 3 complementos y 1 acompañamiento'; return; }
+this.customCart.push({ name: 'Desayuno a tu gusto: ' + this.buildEgg + ' · ' + this.buildComps.join(', ') + ' · ' + this.buildSide, price: this.buildPrice, qty: 1 });
+this.showBuild = false;
+this.showNotification('Desayuno agregado al pedido');
+},
+get currentOrder() {
+if (this.orderSent) {
+const match = this.myOrders.find(x => x.createdAt === this.orderSent.createdAt);
+return match || this.orderSent;
+}
+return this.myOrders.length > 0 ? this.myOrders[0] : null;
+},
+get remainingSecs() { const o = this.currentOrder; if (!o) return 0; return Math.max(0, Math.ceil(((o.etaAt || (o.createdAt + 900000)) - this.nowTs) / 1000)); },
+get etaMinutes() { return Math.ceil(this.remainingSecs / 60); },
+get timerText() { const s = this.remainingSecs; return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); },
+get timerMsg() { return this.remainingSecs > 0 ? 'Tiempo estimado de entrega' : 'Tu desayuno ya debe estar listo'; },
+get orderStatus() { const o = this.currentOrder; return o ? o.status : 'pending'; },
+get prepPct() { const o = this.currentOrder; const tot = ((o && o.prepMinutes) || 15) * 60; return Math.min(100, Math.max(0, 100 - this.remainingSecs / tot * 100)); },
+
+startCustomer() {
+this.role = 'customer'; this.custTab = 'menu'; this.authError = '';
+if (this.timerId) clearInterval(this.timerId);
+this.timerId = setInterval(() => { this.nowTs = Date.now(); }, 1000);
+if (!this.cust.address) this.openAddressModal();
+if (window.FB) this.unsubs.push(window.FB.watchMyOrders(this.cust.phone, l => { this.myOrders = l; }));
+},
+async sellerEnter() {
+if (!this.authName.trim()) { this.authError = 'Escribe tu nombre'; return; }
+if (await this.sha(this.authPass) !== this.SELLER_HASH) { this.authError = 'Clave incorrecta'; return; }
+this.sellerName = this.authName.trim(); this.role = 'seller'; this.activeTab = 'orders'; this.authError = ''; this.startStaff();
+},
+async adminEnter() {
+if (await this.sha(this.authPass) !== this.ADMIN_HASH) { this.authError = 'Clave incorrecta'; return; }
+this.sellerName = 'Admin'; this.role = 'admin'; this.activeTab = 'dashboard'; this.authError = ''; this.startStaff();
+},
+startStaff() {
+try { this.audioCtx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)(); this.audioCtx.resume(); } catch (e) {}
+if (window.FB) this.unsubs.push(window.FB.watchOrders((list, added) => {
+this.orders = list;
+added.filter(o => o.status === 'pending').forEach(o => this.notifyOrder(o));
+}));
+},
+notifyOrder(o) {
+this.newOrderBanner = 'Nuevo pedido de ' + o.customerName + ' (' + this.formatMoney(o.total) + ')';
+this.playTone();
+},
+playTone() {
+try {
+const ctx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)(); this.audioCtx = ctx;
+const o = ctx.createOscillator(), g = ctx.createGain();
+o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.3);
+} catch (e) {}
+},
+logout() {
+this.unsubs.forEach(u => { try { u(); } catch (e) {} }); this.unsubs = [];
+this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.cart = {}; this.orderSent = null;
+},
+itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name).join(', '); },
+changeQty(item, d) { const q = Math.max(0, (this.cart[item.name] || 0) + d); this.cart = Object.assign({}, this.cart, { [item.name]: q }); },
+get cartItems() { return this.menuItems.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, price: c.price, qty: c.qty }))); },
+get cartTotal() { return this.cartItems.reduce((a, i) => a + i.price * i.qty, 0); },
+openCheckout() {
+this.orderMsg = '';
+if (this.cartItems.length === 0) { this.orderMsg = 'Agrega al menos un plato o arma tu desayuno'; return; }
+if (!this.cust || !this.cust.address) { this.openAddressModal(); return; }
+this.payMethod = ''; this.paidWith = ''; this.proofData = ''; this.proofName = ''; this.checkoutMsg = ''; this.showCheckout = true;
+},
+get changeDue() { return (Number(this.paidWith) || 0) - this.cartTotal; },
+get checkoutValid() {
+if (this.payMethod === 'cash') return String(this.paidWith) !== '' && Number(this.paidWith) >= this.cartTotal && this.cartTotal > 0;
+if (this.payMethod === 'transfer') return !!this.proofData;
+return false;
+},
+pickProof(ev) {
+const f = ev.target.files && ev.target.files[0];
+this.checkoutMsg = ''; this.proofData = ''; this.proofName = '';
+if (!f) return;
+const rd = new FileReader();
+rd.onload = () => { this.proofData = rd.result; this.proofName = f.name; };
+rd.readAsDataURL(f);
+},
+async sendOrder() {
+if (!this.checkoutValid) return;
+this.busy = true; this.checkoutMsg = '';
+const now = Date.now();
+const order = {
+customerName: this.cust.name,
+phone: this.cust.phone,
+address: this.cust.address || '',
+items: this.cartItems,
+note: this.orderNote.trim(),
+total: this.cartTotal,
+status: 'pending',
+createdAt: now,
+payMethod: this.payMethod,
+paid: false,
+prepMinutes: 15,
+etaAt: now + 900000
+};
+if (this.payMethod === 'cash') { order.paidWith = Number(this.paidWith); order.change = Number(this.paidWith) - this.cartTotal; }
+try {
+if (this.payMethod === 'transfer') { order.proofId = await window.FB.addProof(this.proofData, this.proofName); }
+await window.FB.addOrder(order);
+this.orderSent = order; this.cart = {}; this.customCart = []; this.orderNote = ''; this.showCheckout = false;
+this.custTab = 'status';
+this.showNotification('¡Pedido enviado con éxito!');
+} catch (e) { this.checkoutMsg = 'No se pudo enviar. Revisa tu Internet.'; }
+this.busy = false;
+},
+waLink(o) {
+const lines = ['Hola, quiero consultar sobre mi pedido:'].concat((o.items || []).map(i => '- ' + i.qty + ' x ' + i.name));
+lines.push('Dirección: ' + (o.address || ''));
+lines.push('Total: Lps. ' + Number(o.total).toFixed(2), 'Nombre: ' + o.customerName);
+return 'https://wa.me/' + this.WA + '?text=' + encodeURIComponent(lines.join('
+'));
+},
+get pendingOrders() { return this.orders.filter(o => o.status === 'pending').sort((a, b) => a.createdAt - b.createdAt); },
+get confirmedToday() { const t = new Date().toDateString(); return this.orders.filter(o => (o.status === 'confirmed' || o.status === 'delivered') && new Date(o.confirmedAt || o.createdAt).toDateString() === t); },
+async confirmOrder(o) {
+if (o.status !== 'pending') return;
+try { await window.FB.setOrderStatus(o.id, 'confirmed', this.sellerName); } catch (e) { this.showNotification('Error'); return; }
+this.history.unshift({ id: Date.now().toString(), type: 'sale', description: 'Pedido en línea: ' + this.itemsText(o) + ' (' + o.customerName + ')', amount: o.total, qty: 1, cost: 0, date: new Date().toISOString() });
+this.saveHistory();
+this.showNotification('Pedido confirmado');
+},
+async rejectOrder(o) {
+if (o.status !== 'pending') return;
+try { await window.FB.setOrderStatus(o.id, 'rejected', this.sellerName); this.showNotification('Pedido rechazado'); } catch (e) { this.showNotification('Error'); }
+},
+async publishMenu() {
+try {
+await window.FB.publishMenu({
+items: this.dishes.map(d => ({ name: d.name, price: Number(d.price), image: d.image || '', desc: d.desc || '' })),
+info: { address: 'Comedor SaborControl' },
+build: { price: Number(this.build.price) || 60, options: this.build.options }
+});
+this.showNotification('Menú y fotos publicados a los clientes');
+} catch (e) { this.showNotification('Error al publicar'); }
+},
+showNotification(msg) {
+this.toast.message = msg; this.toast.show = true;
+setTimeout(() => { this.toast.show = false; }, 2500);
+},
+loadStoredData() {
+try {
+const sD = localStorage.getItem('sabor_dishes');
+if (sD) { this.dishes = JSON.parse(sD); }
+else {
+this.dishes = [
+{ id: '101', name: 'Desayuno Completo', price: 60, image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=500&auto=format&fit=crop&q=60', desc: 'Huevos, frijoles, plátano, queso o mantequilla y tortillas', recipe: [] },
+{ id: '102', name: 'Baleada Sencilla', price: 20, image: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=500&auto=format&fit=crop&q=60', desc: 'Tortilla de harina recién hecha, frijoles fritos, queso y mantequilla', recipe: [] }
+];
+this.saveDishes();
+}
+} catch (e) {}
+},
+saveDishes() { try { localStorage.setItem('sabor_dishes', JSON.stringify(this.dishes)); } catch (e) {} },
+saveHistory() { try { localStorage.setItem('sabor_history', JSON.stringify(this.history)); } catch (e) {} },
+openDishModal() {
+this.editingDishId = null;
+this.dishForm = { name: '', price: 60, image: '', desc: '', recipe: [] };
+this.showDishModal = true;
+},
+editDish(dish) {
+this.editingDishId = dish.id;
+this.dishForm = JSON.parse(JSON.stringify(dish));
+this.showDishModal = true;
+},
+saveDish() {
+if (!this.dishForm.name.trim()) return;
+if (this.editingDishId) {
+const idx = this.dishes.findIndex(d => d.id === this.editingDishId);
+if (idx !== -1) this.dishes[idx] = { ...this.dishForm, id: this.editingDishId };
+} else {
+this.dishes.push({ ...this.dishForm, id: Date.now().toString() });
+}
+this.saveDishes();
+this.showDishModal = false;
+this.showNotification('Plato guardado');
+},
+deleteDish(id) {
+this.dishes = this.dishes.filter(d => d.id !== id);
+this.saveDishes();
+this.showNotification('Plato eliminado');
+},
+calculateDishCost() { return 0; },
+formatMoney(a) { return 'Lps. ' + (parseFloat(a) || 0).toFixed(2); },
+formatDate(s) { return s ? new Date(s).toLocaleDateString('es-HN') : ''; },
+formatDateTime(s) { return s ? new Date(s).toLocaleDateString('es-HN') + ' ' + new Date(s).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : ''; },
+todayDateFormatted() { return new Date().toLocaleDateString('es-HN', { weekday: 'short', day: 'numeric', month: 'short' }); },
+get todayStats() { return { sales: 0, expenses: 0, netProfit: 0 }; },
+get filteredHistory() { return this.history; }
+}
+}
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, getDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const app = initializeApp({
+  apiKey: "AIzaSyD8-tWvD-AhoWDrCUcqsyphpaCVtE6QMkI",
+  authDomain: "saborcontrol-30cbd.firebaseapp.com",
+  projectId: "saborcontrol-30cbd",
+  storageBucket: "saborcontrol-30cbd.firebasestorage.app",
+  messagingSenderId: "1046431066702",
+  appId: "1:1046431066702:web:f6bcc1586465a3949ef11f"
+});
+const db = getFirestore(app);
+const err = e => console.error("Firestore:", e);
+const toList = s => s.docs.map(d => ({ id: d.id, ...d.data() }));
+window.FB = {
+  addOrder: o => addDoc(collection(db, "orders"), o),
+  updateOrder: (id, f) => updateDoc(doc(db, "orders", id), f),
+  addProof: async (data, name) => (await addDoc(collection(db, "proofs"), { data, name, createdAt: Date.now() })).id,
+  getProof: async id => { const s = await getDoc(doc(db, "proofs", id)); return s.exists() ? s.data() : null; },
+  setOrderStatus: (id, status, by) => updateDoc(doc(db, "orders", id), { status, by, confirmedAt: Date.now() }),
+  publishMenu: m => setDoc(doc(db, "menu", "current"), { ...m, updated: Date.now() }),
+  watchMenu: cb => onSnapshot(doc(db, "menu", "current"), s => cb(s.exists() ? s.data() : {}), err),
+  watchMyOrders: (phone, cb) => onSnapshot(query(collection(db, "orders"), where("phone", "==", phone)), s => cb(toList(s).sort((a, b) => b.createdAt - a.createdAt)), err),
+  watchOrders: cb => { let first = true; return onSnapshot(collection(db, "orders"), s => {
+    const added = first ? [] : s.docChanges().filter(c => c.type === "added").map(c => ({ id: c.doc.id, ...c.doc.data() }));
+    first = false; cb(toList(s), added);
+  }, err); }
+};
+window.dispatchEvent(new Event("fb-ready"));
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.update();
+    }
+  });
+}
+</script>
+</body>
+</html>
