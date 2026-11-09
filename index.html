@@ -44,27 +44,11 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <!-- AVISO NUEVO PEDIDO -->
 <div x-show="newOrderBanner && (role === 'seller' || role === 'admin')" x-cloak @click="activeTab = 'orders'; newOrderBanner = null" class="fixed top-2 left-2 right-2 max-w-md mx-auto z-50 bg-amber-400 text-slate-900 font-bold text-sm rounded-xl p-3 shadow-2xl cursor-pointer">🔔 <span x-text="newOrderBanner"></span> — toca para ver</div>
 
-<!-- MODAL CAMBIAR DIRECCIÓN CLIENTE -->
-<div x-show="showAddressModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
-<div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-3">
-<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-sm">📍 Tu dirección de entrega</h3><button @click="showAddressModal = false" class="text-slate-400 text-lg">✕</button></div>
-<p class="text-xs text-slate-500">Escribe tu dirección exacta (barrio, colonia, casa o referencia):</p>
-<textarea x-model="tempAddress" rows="3" placeholder="Ej: Bo. El Centro, frente a Farmacia Simán, casa blanca" class="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
-<div class="flex justify-end space-x-2 pt-2">
-<button type="button" @click="showAddressModal = false" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
-<button type="button" @click="saveAddress()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md">Guardar Dirección</button>
-</div>
-</div>
-</div>
-
 <!-- CHECKOUT / METODO DE PAGO -->
 <div x-show="showCheckout" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
 <div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-4 max-h-[92vh] overflow-y-auto">
 <div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base">Método de pago</h3><button @click="showCheckout = false" class="text-slate-400 text-lg">✕</button></div>
-<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1">
-<div class="flex justify-between items-center"><span class="font-bold text-slate-700">📍 Entregar en:</span><button @click="openAddressModal()" class="text-brand-600 font-bold underline">Cambiar</button></div>
-<p class="text-slate-600" x-text="cust && cust.address ? cust.address : 'Sin dirección guardada'"></p>
-</div>
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs flex justify-between items-center"><span x-text="'📍 Entregar en: ' + (cust && cust.address ? cust.address : '')"></span><button @click="openAddr()" class="text-brand-600 font-bold ml-2 shrink-0">✏️ Cambiar dirección</button></div>
 <div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800">Total a pagar</span><strong class="text-brand-700" x-text="formatMoney(cartTotal)"></strong></div>
 <div class="grid grid-cols-2 gap-2">
 <button type="button" @click="payMethod = 'cash'" :class="payMethod === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700'" class="border-2 rounded-xl p-3 text-center font-bold text-xs"><span class="block text-3xl">💵</span>Efectivo</button>
@@ -118,6 +102,64 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <template x-if="proofView.data && proofView.data.indexOf('data:image') !== 0"><p class="text-xs text-slate-600 text-center">Archivo PDF. Descárgalo para verlo.</p></template>
 <a x-show="proofView.data" :href="proofView.data" :download="proofView.name || 'comprobante'" class="block text-center bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs">⬇ Descargar comprobante</a>
 </div>
+</div>
+
+<!-- DIRECCION -->
+<div x-show="showAddr" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-3">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base">📍 Dirección de entrega</h3><button @click="showAddr = false; afterAddr = false" class="text-slate-400 text-lg">✕</button></div>
+<p x-show="addrMsg" class="text-xs text-amber-700 font-bold" x-text="addrMsg"></p>
+<textarea x-model="addrDraft" rows="3" placeholder="Barrio, colonia, calle, casa, referencias..." class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+<button @click="saveAddr()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl">Guardar dirección</button>
+</div>
+</div>
+
+<!-- PLATO (CLIENTE) -->
+<div x-show="dishSel" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<template x-if="dishSel"><div class="bg-white w-full max-w-md rounded-t-2xl max-h-[94vh] overflow-y-auto">
+<div class="h-40 bg-slate-100 flex items-center justify-center overflow-hidden relative"><img x-show="dishSel.photo" :src="dishSel.photo || ''" class="w-full h-full object-cover"><span x-show="!dishSel.photo" class="text-6xl">🍽️</span><button @click="dishSel = null" class="absolute top-2 right-2 bg-white/90 w-8 h-8 rounded-full text-slate-700 font-bold">✕</button></div>
+<div class="p-5 space-y-4">
+<div><h3 class="font-extrabold text-slate-800 text-lg" x-text="dishSel.name"></h3><p class="text-xs text-slate-500" x-text="dishSel.desc"></p><p class="text-sm text-brand-600 font-extrabold mt-1" x-text="'Precio base: ' + formatMoney(dishSel.price)"></p></div>
+<template x-for="(sec, si) in (dishSel.sections || [])" :key="si"><div>
+<h4 class="text-xs font-bold uppercase text-slate-500 mb-1"><span x-text="sec.title"></span> <span class="text-rose-500" x-text="secHint(sec)"></span></h4>
+<div class="grid grid-cols-2 gap-2"><template x-for="o in sec.options" :key="o.name"><button type="button" @click="togglePick(si, sec, o.name)" :class="isPicked(si, o.name) ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200'" class="border rounded-xl p-2.5 text-xs font-bold text-left" x-text="(sec.type === 'single' ? (isPicked(si, o.name) ? '◉ ' : '○ ') : (isPicked(si, o.name) ? '✔ ' : '')) + o.name + (Number(o.extra) > 0 ? ' (+ ' + formatMoney(o.extra) + ')' : '')"></button></template></div>
+</div></template>
+<div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Cantidad</span><div class="flex items-center space-x-2"><button type="button" @click="dishQty = Math.max(1, dishQty - 1)" class="w-9 h-9 rounded-lg bg-slate-100 font-bold">−</button><span class="w-8 text-center font-bold" x-text="dishQty"></span><button type="button" @click="dishQty = dishQty + 1" class="w-9 h-9 rounded-lg bg-brand-600 text-white font-bold">+</button></div></div>
+<p class="text-xs text-rose-600 text-center" x-text="dishMsg"></p>
+<button @click="addDishToCart()" :disabled="!dishValid" :class="dishValid ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed'" class="w-full text-white font-bold py-3 rounded-xl" x-text="'Agregar al pedido • ' + formatMoney(dishTotal)"></button>
+</div>
+</div></template>
+</div>
+
+<!-- EDITOR DE PLATO (ADMIN) -->
+<div x-show="showCatEd" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<template x-if="catEd"><div class="bg-white w-full max-w-md rounded-t-2xl p-5 space-y-3 max-h-[94vh] overflow-y-auto">
+<div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-base" x-text="catEd.id ? 'Editar plato' : 'Nuevo plato'"></h3><button @click="showCatEd = false" class="text-slate-400 text-lg">✕</button></div>
+<input type="text" x-model="catEd.name" placeholder="Nombre del plato" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:outline-none">
+<textarea x-model="catEd.desc" rows="2" placeholder="Descripción breve" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:outline-none"></textarea>
+<div class="flex items-center space-x-2"><label class="text-xs font-bold text-slate-700 w-24">Precio base (Lps)</label><input type="number" inputmode="decimal" step="0.01" min="0" x-model.number="catEd.price" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none"></div>
+<div class="space-y-2 bg-slate-50 border border-slate-200 rounded-xl p-3">
+<p class="text-xs font-bold text-slate-700">Foto del plato</p>
+<div class="flex items-center space-x-3"><img x-show="catEd.photo" :src="catEd.photo || ''" class="w-20 h-20 rounded-xl object-cover border"><div class="flex-1 space-y-2">
+<input type="url" x-model="catPhotoUrl" @change="catEd.photo = catPhotoUrl" placeholder="Pega la URL de la foto" class="w-full text-base p-2 border border-slate-300 rounded-lg focus:outline-none">
+<label class="block text-center bg-sky-600 text-white font-bold py-2 rounded-lg text-xs cursor-pointer">📷 Subir foto<input type="file" accept="image/*" class="hidden" @change="pickCatPhoto($event)"></label>
+<button x-show="catEd.photo" @click="catEd.photo = ''; catPhotoUrl = ''" class="text-xs text-rose-600 font-bold">Quitar foto</button></div></div>
+</div>
+<p class="text-xs font-bold text-slate-700 pt-1">Secciones de complementos</p>
+<template x-for="(sec, si) in catEd.sections" :key="si"><div class="border border-amber-200 bg-amber-50 rounded-xl p-3 space-y-2">
+<div class="flex space-x-2"><input type="text" x-model="sec.title" placeholder="Título (ej: Elige tu huevo)" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-lg focus:outline-none"><button @click="removeSec(si)" class="text-rose-600 font-bold px-1">🗑</button></div>
+<div class="flex flex-wrap items-center gap-2 text-xs">
+<select x-model="sec.type" class="text-base p-1.5 border border-slate-300 rounded-lg bg-white"><option value="single">Selección única</option><option value="multi">Selección múltiple</option></select>
+<label class="flex items-center space-x-1"><input type="checkbox" x-model="sec.required"><span>Obligatorio</span></label>
+<input x-show="sec.type === 'multi'" type="number" inputmode="numeric" min="0" x-model.number="sec.max" placeholder="Máx (0 = sin límite)" class="w-36 text-base p-1.5 border border-slate-300 rounded-lg focus:outline-none">
+</div>
+<template x-for="(op, oi) in sec.options" :key="oi"><div class="flex space-x-2"><input type="text" x-model="op.name" placeholder="Opción" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-lg focus:outline-none"><input type="number" inputmode="decimal" step="0.01" min="0" x-model.number="op.extra" placeholder="+Lps" class="w-20 text-base p-2 border border-slate-300 rounded-lg focus:outline-none"><button @click="removeOptCat(si, oi)" class="text-slate-400 px-1">✕</button></div></template>
+<button @click="addOptCat(si)" class="text-xs font-bold text-brand-600">＋ Agregar opción</button>
+</div></template>
+<button @click="addSec()" class="w-full bg-amber-100 text-amber-800 font-bold py-2 rounded-xl text-xs">＋ Agregar sección</button>
+<p class="text-xs text-rose-600 text-center" x-text="catMsg"></p>
+<div class="flex space-x-2 pt-1"><button @click="showCatEd = false" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl text-sm">Cancelar</button><button @click="saveCat()" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-xl text-sm">Guardar plato</button></div>
+</div></template>
 </div>
 
 <!-- ARMA TU DESAYUNO -->
@@ -177,6 +219,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <p class="text-sm text-center">Crea tu cuenta</p>
 <input type="text" x-model="custForm.name" placeholder="Tu nombre" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
 <input type="tel" inputmode="numeric" x-model="custForm.phone" placeholder="Tu número de celular" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<textarea x-model="custForm.address" rows="2" placeholder="Tu dirección de entrega" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none"></textarea>
 <input type="password" x-model="custForm.pass" placeholder="Crea tu propia clave (mín. 4)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
 <button @click="custCreate()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Guardar y entrar</button>
 <p class="text-xs text-amber-200 text-center" x-text="authError"></p>
@@ -208,117 +251,80 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 
 <!-- CLIENTE -->
 <div x-show="role === 'customer'" x-cloak class="flex-1 flex flex-col pb-20">
-<!-- HEADER CLIENTE -->
-<div class="bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white p-4 sticky top-0 z-30 shadow-md">
-<div class="flex justify-between items-center mb-2">
-<div><h1 class="font-extrabold text-lg">🍴 SaborControl</h1><p class="text-xs text-brand-100" x-text="cust ? 'Hola, ' + cust.name : ''"></p></div>
-<button @click="logout()" class="bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">Salir</button>
+<div class="bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white p-4 sticky top-0 z-30">
+<div class="flex justify-between items-center"><div><h1 class="font-extrabold text-lg">🍴 SaborControl</h1><p class="text-xs text-brand-100" x-text="cust ? 'Hola, ' + cust.name : ''"></p></div><button @click="logout()" class="bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">Salir</button></div>
+<div class="mt-2 flex items-center justify-between bg-white/15 rounded-lg px-3 py-1.5 text-xs"><span class="truncate" x-text="'📍 Entregar en: ' + (cust && cust.address ? cust.address : 'sin dirección')"></span><button @click="openAddr()" class="ml-2 shrink-0 font-bold underline">✏️ Cambiar dirección</button></div>
 </div>
-<!-- BARRA DE DIRECCIÓN PERMANENTE -->
-<div class="bg-black/20 rounded-xl p-2.5 flex items-center justify-between text-xs">
-<div class="truncate mr-2"><span class="text-brand-200 font-bold">📍 Entregar en: </span><span class="text-white font-medium truncate" x-text="cust && cust.address ? cust.address : 'Toca para agregar dirección'"></span></div>
-<button @click="openAddressModal()" class="bg-white text-brand-800 font-extrabold px-2.5 py-1 rounded-lg shrink-0 active:scale-95 transition">✏️ Cambiar</button>
-</div>
-</div>
+<div class="p-4 space-y-4 flex-1">
 
-<!-- TAB 1: MENÚ / PLATOS (CLIENTE) -->
-<div x-show="custTab === 'menu'" class="p-4 space-y-4 flex-1">
+<!-- TAB MENU -->
+<div x-show="custTab === 'menu'" class="space-y-4">
+<template x-if="catalog.length > 0"><div><h2 class="font-bold text-slate-800 mb-2">Menú</h2>
+<div class="grid grid-cols-2 gap-3"><template x-for="d in catalog" :key="d.id">
+<button @click="openDish(d)" class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden text-left active:scale-95 transition flex flex-col">
+<div class="h-28 bg-slate-100 flex items-center justify-center overflow-hidden"><img x-show="d.photo" :src="d.photo || ''" class="w-full h-full object-cover"><span x-show="!d.photo" class="text-4xl">🍽️</span></div>
+<div class="p-2.5 space-y-0.5"><p class="font-bold text-slate-800 text-sm" x-text="d.name"></p><p class="text-[11px] text-slate-500 line-clamp-2" x-text="d.desc"></p><p class="text-xs text-brand-600 font-extrabold" x-text="'Desde ' + formatMoney(d.price)"></p></div>
+</button></template></div></div></template>
+<template x-if="catalog.length === 0"><div class="space-y-3">
 <button @click="openBuild()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-2xl p-4 shadow-lg text-left active:scale-95 transition"><span class="block text-[10px] font-extrabold uppercase tracking-wider">⭐ Premium</span><span class="block font-extrabold text-base">Arma tu desayuno a tu gusto</span><span class="block text-sm font-bold" x-text="'Por ' + formatMoney(buildBase) + ' · huevo + 3 complementos + acompañamiento'"></span></button>
+<h2 class="font-bold text-slate-800">Menú</h2>
+<template x-if="menuItems.length === 0"><p class="text-xs text-slate-400 bg-slate-50 rounded-xl p-4 text-center">El menú aún no está disponible. Intenta más tarde.</p></template>
+<template x-for="item in menuItems" :key="item.name">
+<div class="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+<div class="min-w-0 mr-2"><p class="font-bold text-sm truncate" x-text="item.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(item.price)"></p></div>
+<div class="flex items-center space-x-2"><button @click="changeQty(item, -1)" class="w-8 h-8 rounded-lg bg-slate-100 font-bold">−</button><span class="w-6 text-center font-bold text-sm" x-text="cart[item.name] || 0"></span><button @click="changeQty(item, 1)" class="w-8 h-8 rounded-lg bg-brand-600 text-white font-bold">+</button></div>
+</div>
+</template></div></template>
 
-<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu desayuno personalizado</h3>
-<template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="c.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price)"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
-
-<div class="flex justify-between items-center pt-1"><h2 class="font-bold text-slate-800 text-base">Menú del Día</h2><span class="text-xs text-slate-400" x-text="visibleMenu.length + ' platos'"></span></div>
-
-<!-- CUADRÍCULA DE PLATOS CON FOTO -->
-<template x-if="visibleMenu.length === 0"><p class="text-xs text-slate-400 bg-slate-50 rounded-xl p-4 text-center">El menú aún no está disponible. Intenta más tarde.</p></template>
-<div class="grid grid-cols-2 gap-3">
-<template x-for="item in visibleMenu" :key="item.name">
-<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition">
-<div class="relative h-28 bg-slate-100 flex items-center justify-center overflow-hidden">
-<template x-if="item.image"><img :src="item.image" class="w-full h-full object-cover"></template>
-<template x-if="!item.image"><span class="text-4xl">🍳</span></template>
-</div>
-<div class="p-3 flex-1 flex flex-col justify-between space-y-2">
-<div>
-<p class="font-bold text-slate-800 text-xs line-clamp-1" x-text="item.name"></p>
-<p class="text-[11px] text-slate-400 line-clamp-1" x-text="item.desc || 'Desayuno fresco hecho al momento'"></p>
-<p class="text-xs text-brand-600 font-extrabold mt-1" x-text="formatMoney(item.price)"></p>
-</div>
-<div class="flex items-center justify-between pt-1">
-<button @click="changeQty(item, -1)" class="w-7 h-7 rounded-lg bg-slate-100 font-bold text-slate-700 active:bg-slate-200">−</button>
-<span class="text-xs font-bold" x-text="cart[item.name] || 0"></span>
-<button @click="changeQty(item, 1)" class="w-7 h-7 rounded-lg bg-brand-600 text-white font-bold active:bg-brand-700">+</button>
-</div>
-</div>
-</div>
-</template>
-</div>
-
-<div><label class="block text-xs font-bold text-slate-700 mb-1">Notas especiales o detalles para la cocina</label>
-<textarea x-model="orderNote" rows="2" placeholder="Ej: Frijoles fritos con queso, tortilla bien caliente..." class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea></div>
-
-<div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800">Total</span><strong class="text-brand-700 text-base" x-text="formatMoney(cartTotal)"></strong></div>
-<button @click="openCheckout()" :disabled="busy || cartTotal <= 0" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl shadow-md">🛒 Confirmar compra</button>
+<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu pedido personalizado</h3>
+<template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="(c.qty || 1) + ' x ' + c.name"></p><p x-show="c.detail" class="text-[11px] text-slate-600" x-text="c.detail"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price * (c.qty || 1))"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Notas: escribe cómo lo quieres</label>
+<textarea x-model="orderNote" rows="2" placeholder="Ej: sin plátano, poco picante" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea></div>
+<div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800">Total</span><strong class="text-brand-700" x-text="formatMoney(cartTotal)"></strong></div>
+<button @click="openCheckout()" :disabled="busy" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-md">🛒 Confirmar compra</button>
 <p class="text-xs text-rose-600 text-center" x-text="orderMsg"></p>
-
-<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1"><p class="font-bold text-slate-700">Mi cuenta</p><p x-text="cust ? 'Nombre: ' + cust.name : ''"></p><p x-text="cust ? 'Celular: ' + cust.phone : ''"></p><p x-show="cust && webauthnOk"><button @click="cust && cust.credId ? null : enableBio()" class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg" x-text="cust && cust.credId ? '👆 Huella / patrón activado' : '👆 Activar huella / patrón'"></button></p>
-<p><button @click="showCustPass = !showCustPass" class="text-brand-600 underline" x-text="showCustPass ? 'Ocultar clave' : 'Ver mi clave'"></button> <strong x-show="showCustPass" x-text="cust ? cust.pass : ''"></strong></p></div>
+<template x-if="orderSent"><div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2 text-center"><p class="text-sm font-bold text-emerald-800">¡Pedido enviado! Espera la confirmación.</p><button @click="showThanks = true" class="w-full bg-amber-400 text-slate-900 font-bold py-2 rounded-xl text-xs">⏱ Ver preparación de mi desayuno</button><a :href="waLink(orderSent)" target="_blank" class="block bg-green-500 text-white font-bold py-2 rounded-xl text-xs">Avisar también por WhatsApp</a></div></template>
 </div>
 
-<!-- TAB 2: MI PEDIDO / ESTADO (CLIENTE) -->
-<div x-show="custTab === 'status'" class="p-5 space-y-4 flex-1">
-<h2 class="font-bold text-slate-800 text-base">Estado de tu Pedido</h2>
-<template x-if="!currentOrder"><div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2"><span class="text-4xl block">🍳</span><p class="text-sm font-bold text-slate-700">No tienes pedidos en curso</p><p class="text-xs text-slate-400">Pide tu desayuno desde la pestaña Menú</p><button @click="custTab = 'menu'" class="mt-2 bg-brand-600 text-white font-bold px-4 py-2 rounded-xl text-xs">Ir al Menú</button></div></template>
-<template x-if="currentOrder">
-<div class="space-y-4">
-<div class="bg-gradient-to-b from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-6 text-center space-y-4 shadow-sm">
-<div class="relative h-28 flex items-center justify-center"><span class="chef">👩‍🍳</span><span class="pan">🍳</span><span class="steam s1">♨️</span><span class="steam s2">♨️</span></div>
-<div>
-<p class="text-lg font-extrabold text-slate-800">Golosa</p>
-<p class="text-xs text-slate-600">está preparando tu comida con amor</p>
-</div>
-<div class="bg-white rounded-2xl p-4 shadow-sm space-y-2 border border-amber-100">
-<p class="text-xs text-slate-500 font-bold" x-text="remainingSecs > 0 ? 'Tiempo estimado: ' + etaMinutes + ' minutos' : timerMsg"></p>
-<p class="text-4xl font-extrabold text-brand-700 tabular-nums" x-text="timerText"></p>
-<div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 transition-all duration-500" :style="'width:' + prepPct + '%'"></div></div>
-</div>
-<div class="inline-block px-3 py-1 rounded-full text-xs font-bold" :class="orderStatus === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : (orderStatus === 'delivered' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-800')" x-text="orderStatus === 'confirmed' ? '✅ En preparación' : (orderStatus === 'delivered' ? '🎉 ¡Entregado!' : '⏳ Pendiente de confirmación')"></div>
+<!-- TAB MI PEDIDO -->
+<div x-show="custTab === 'order'" class="space-y-3">
+<h2 class="font-bold text-slate-800">Mi pedido</h2>
+<template x-if="!trackOrder"><div class="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-300"><p class="text-4xl mb-1">🔔</p><p class="text-sm font-semibold text-slate-600">No tienes pedidos activos</p><p class="text-xs text-slate-400">Cuando hagas un pedido, aquí verás su estado.</p></div></template>
+<template x-if="trackOrder"><div class="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-3 shadow-sm">
+<p class="font-extrabold text-brand-700" x-text="'Pedido ' + orderNo(trackOrder)"></p>
+<span class="inline-block px-3 py-1 rounded-full text-xs font-bold" :class="trackOrder.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'" x-text="trackOrder.status === 'pending' ? 'Pendiente' : 'En preparación'"></span>
+<div class="relative h-32 flex items-center justify-center"><span class="chef">👩‍🍳</span><span class="pan">🍳</span><span class="steam s1">♨️</span><span class="steam s2">♨️</span></div>
+<p class="text-sm text-slate-700"><strong>Golosa</strong> está preparando tu desayuno</p>
+<div class="bg-slate-50 rounded-xl p-3 space-y-1.5"><p class="text-xs text-slate-500">Tiempo asignado por la vendedora</p><p class="text-4xl font-extrabold text-brand-700 tabular-nums" x-text="mmss(trackSecs)"></p><p class="text-sm font-bold text-slate-700" x-text="trackMin + ' min restantes'"></p><div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 transition-all" :style="'width:' + trackPct + '%'"></div></div></div>
+<div class="text-left text-xs space-y-0.5"><template x-for="(it, k) in trackOrder.items" :key="k"><p class="text-slate-700" x-text="it.qty + ' x ' + it.name + (it.detail ? ' (' + it.detail + ')' : '')"></p></template></div>
+<p class="font-bold text-brand-700" x-text="'Total: ' + formatMoney(trackOrder.total)"></p>
+</div></template>
 </div>
 
-<div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 text-xs">
-<div class="flex justify-between items-center border-b pb-2"><span class="font-bold text-slate-700">Detalles del pedido</span><span class="text-slate-400" x-text="formatDateTime(new Date(currentOrder.createdAt).toISOString())"></span></div>
-<p><strong>Destino: </strong><span x-text="currentOrder.address || 'Sin dirección'"></span></p>
-<p><strong>Productos: </strong><span x-text="itemsText(currentOrder)"></span></p>
-<div class="flex justify-between pt-1 border-t text-sm font-bold"><span class="text-slate-700">Total:</span><span class="text-brand-700" x-text="formatMoney(currentOrder.total)"></span></div>
-</div>
-<a :href="waLink(currentOrder)" target="_blank" class="block bg-green-500 text-white font-bold py-3 rounded-xl text-xs text-center shadow-sm">📲 Consultar por WhatsApp</a>
-</div>
-</template>
-</div>
-
-<!-- TAB 3: HISTORIAL DE COMPRAS (CLIENTE) -->
-<div x-show="custTab === 'history'" class="p-4 space-y-3 flex-1">
-<h2 class="font-bold text-slate-800 text-base">🧾 Historial de compras</h2>
-<template x-if="myOrders.length === 0"><p class="text-center py-10 text-xs text-slate-400">Aún no tienes pedidos registrados.</p></template>
+<!-- TAB HISTORIAL -->
+<div x-show="custTab === 'history'" class="space-y-3">
+<h2 class="font-bold text-slate-800">Historial</h2>
+<template x-if="myOrders.length === 0"><p class="text-center py-6 text-xs text-slate-400">Aún no tienes compras.</p></template>
 <template x-for="o in myOrders" :key="o.id">
-<div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 text-xs shadow-sm">
-<div class="flex justify-between items-center"><span class="font-bold text-slate-800" x-text="'Pedido #' + (o.id ? o.id.slice(-5) : '')"></span><span class="font-bold px-2 py-0.5 rounded-full" :class="o.status === 'rejected' ? 'bg-rose-100 text-rose-700' : (o.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')" x-text="statusLabel(o.status)"></span></div>
-<p class="text-[11px] text-slate-400" x-text="formatDateTime(new Date(o.createdAt).toISOString())"></p>
-<template x-for="(it, k) in o.items" :key="k"><p class="text-slate-800" x-text="it.qty + ' x ' + it.name"></p></template>
-<p x-show="o.address" class="text-slate-500" x-text="'📍 ' + o.address"></p>
-<div class="flex justify-between pt-2 border-t border-slate-100"><span class="text-slate-500" x-text="'Pago: ' + payLabel(o)"></span><strong class="text-brand-700 font-extrabold" x-text="formatMoney(o.total)"></strong></div>
+<div class="bg-white border border-slate-200 rounded-xl p-3 space-y-1 text-xs shadow-sm">
+<div class="flex justify-between"><span class="font-extrabold text-brand-700" x-text="orderNo(o)"></span><span class="font-bold" :class="o.status === 'rejected' ? 'text-rose-600' : (o.status === 'pending' ? 'text-amber-600' : 'text-emerald-600')" x-text="statusLabel(o.status)"></span></div>
+<p class="text-[11px] text-slate-500" x-text="fmtFull(o.createdAt)"></p>
+<template x-for="(it, k) in o.items" :key="k"><p class="text-slate-800" x-text="it.qty + ' x ' + it.name + (it.detail ? ' (' + it.detail + ')' : '')"></p></template>
+<div class="flex justify-between pt-1 border-t border-slate-100"><span class="text-slate-500" x-text="'Pago: ' + payLabel(o)"></span><strong class="text-brand-700" x-text="formatMoney(o.total)"></strong></div>
 </div>
 </template>
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1"><p class="font-bold text-slate-700">Mi cuenta</p><p x-text="cust ? 'Nombre: ' + cust.name : ''"></p><p x-text="cust ? 'Celular: ' + cust.phone : ''"></p><p x-text="cust && cust.address ? 'Dirección: ' + cust.address : ''"></p><p x-show="cust && webauthnOk"><button @click="cust && cust.credId ? null : enableBio()" class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg" x-text="cust && cust.credId ? '👆 Huella / patrón activado' : '👆 Activar huella / patrón'"></button></p><p><button @click="showCustPass = !showCustPass" class="text-brand-600 underline" x-text="showCustPass ? 'Ocultar clave' : 'Ver mi clave'"></button> <strong x-show="showCustPass" x-text="cust ? cust.pass : ''"></strong></p></div>
 </div>
 
-<!-- BARRA DE NAVEGACIÓN INFERIOR (CLIENTE) -->
-<nav class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
-<button @click="custTab = 'menu'" :class="custTab === 'menu' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🍔</span><span>Menú / Platos</span></button>
-<button @click="custTab = 'status'" :class="custTab === 'status' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="relative flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🔔</span><span>Mi Pedido</span><span x-show="orderSent && orderStatus !== 'delivered'" class="absolute -top-0.5 right-2 w-2 h-2 rounded-full bg-emerald-500"></span></button>
-<button @click="custTab = 'history'" :class="custTab === 'history' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🧾</span><span>Historial</span></button>
-</nav>
 </div>
+<div class="bg-slate-900 text-white p-4 text-xs text-center space-y-1"><p x-text="'📍 ' + (menuInfo.address || 'Dirección por confirmar')"></p><p>📞 +504 9414-9886</p></div>
+</div>
+
+<nav x-show="role === 'customer'" x-cloak class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
+<button @click="custTab = 'menu'" :class="custTab === 'menu' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-burger text-lg mb-0.5"></i><span>Menú / Platos</span></button>
+<button @click="custTab = 'order'" :class="custTab === 'order' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="relative flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🔔</span><span>Mi Pedido</span><span x-show="trackOrder" class="absolute top-0 right-2 w-2.5 h-2.5 rounded-full bg-rose-500"></span></button>
+<button @click="custTab = 'history'" :class="custTab === 'history' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-receipt text-lg mb-0.5"></i><span>Historial</span></button>
+</nav>
 
 <header x-show="role === 'seller' || role === 'admin'" x-cloak class="bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white p-4 sticky top-0 z-30 shadow-md">
 <div class="flex justify-between items-center">
@@ -510,6 +516,8 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div class="flex items-center space-x-2"><label class="text-xs font-bold text-slate-700 w-24">Precio base (Lps)</label><input type="number" inputmode="decimal" x-model.number="build.price" @change="saveBuild()" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none"></div>
 <p class="text-[11px] text-slate-500">Las opciones (huevo, complementos y acompañamiento) son fijas. Huevo picado con chorizo suma Lps. 15.00. Si cambias el precio, toca "Publicar menú y complementos".</p>
 </div>
+<div x-show="role === 'seller' && catalog.length > 0" class="bg-white border border-slate-200 rounded-2xl p-3 space-y-2"><p class="font-bold text-slate-800 text-sm">Catálogo en línea</p>
+<template x-for="d in catalog" :key="d.id"><div class="flex items-center space-x-3"><img x-show="d.photo" :src="d.photo || ''" class="w-10 h-10 rounded-lg object-cover"><div class="flex-1 min-w-0"><p class="text-xs font-bold truncate" x-text="d.name"></p><p class="text-[11px] text-slate-500" x-text="(d.sections ? d.sections.length : 0) + ' sección(es) de complementos'"></p></div><span class="text-xs font-bold text-brand-700" x-text="formatMoney(d.price)"></span></div></template></div>
 <button x-show="role === 'admin'" @click="publishMenu()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md">📣 Publicar menú y complementos</button>
 <template x-if="dishSearch.trim() && filteredDishes.length === 0"><p class="text-center py-4 text-xs text-slate-400">No se encontró ningún plato con esa búsqueda.</p></template>
 <div class="space-y-3">
@@ -539,31 +547,45 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </div>
 </div>
 
+<!-- CATALOGO (ADMIN) -->
+<div x-show="activeTab === 'catalog'" x-cloak class="space-y-4">
+<div class="flex justify-between items-center"><div><h2 class="font-bold text-slate-800 text-base">Catálogo en línea</h2><p class="text-xs text-slate-500">Lo que ven los clientes. Los cambios se sincronizan al instante.</p></div>
+<button @click="openCatEd(null)" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-md">＋ Nuevo plato</button></div>
+<template x-if="catalog.length === 0"><div class="text-center py-6 bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-2"><p class="text-sm font-semibold text-slate-600">Aún no hay platos en el catálogo</p><button @click="seedCatalog()" class="bg-amber-400 text-slate-900 font-bold px-3 py-2 rounded-xl text-xs">Cargar 2 ejemplos</button></div></template>
+<template x-for="d in catalog" :key="d.id">
+<div class="bg-white border border-slate-200 rounded-2xl p-3 flex items-center space-x-3 shadow-sm">
+<img x-show="d.photo" :src="d.photo || ''" class="w-16 h-16 rounded-xl object-cover shrink-0">
+<div x-show="!d.photo" class="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center text-2xl shrink-0">🍽️</div>
+<div class="flex-1 min-w-0"><p class="font-bold text-slate-800 text-sm truncate" x-text="d.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(d.price)"></p><p class="text-[11px] text-slate-500" x-text="(d.sections ? d.sections.length : 0) + ' sección(es) de complementos'"></p></div>
+<div class="flex flex-col space-y-1"><button @click="openCatEd(d)" class="bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-lg text-xs">✏️ Editar</button><button @click="delCat(d)" class="bg-rose-100 text-rose-700 font-bold px-2.5 py-1 rounded-lg text-xs">🗑 Eliminar</button></div>
+</div>
+</template>
+</div>
+
 <!-- PEDIDOS EN LINEA -->
 <div x-show="activeTab === 'orders'" x-cloak class="space-y-4">
 <div><h2 class="font-bold text-slate-800 text-base">Pedidos en línea</h2><p class="text-xs text-slate-500">Pedidos nuevos de clientes por confirmar</p></div>
 <template x-if="pendingOrders.length === 0"><p class="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-300">No hay pedidos pendientes.</p></template>
 <template x-for="o in pendingOrders" :key="o.id">
 <div class="bg-amber-50 border border-amber-300 rounded-2xl p-4 space-y-2">
-<div class="flex justify-between items-start"><div><p class="font-bold text-slate-800 text-sm" x-text="o.customerName"></p><p class="text-xs text-slate-500" x-text="'📞 ' + o.phone + ' · ' + formatDateTime(new Date(o.createdAt).toISOString())"></p></div><span class="font-extrabold text-brand-700 text-sm" x-text="formatMoney(o.total)"></span></div>
-<p class="text-xs font-bold text-slate-900 bg-white border border-amber-200 rounded-lg p-2">📍 Dirección: <span class="text-rose-700 font-extrabold" x-text="o.address || 'Sin dirección'"></span></p>
-<p class="text-xs text-slate-700" x-text="itemsText(o)"></p>
+<div class="flex justify-between items-start"><div><p class="font-extrabold text-brand-700 text-sm" x-text="'Pedido ' + orderNo(o)"></p><p class="text-[11px] text-slate-500" x-text="fmtFull(o.createdAt)"></p><p class="font-bold text-slate-800 text-sm mt-1" x-text="o.customerName"></p><p class="text-xs text-slate-500" x-text="'📞 ' + o.phone"></p><p class="text-xs text-slate-700" x-text="'📍 ' + (o.address || 'Sin dirección')"></p></div><span class="font-extrabold text-brand-700 text-sm" x-text="formatMoney(o.total)"></span></div>
+<div class="bg-white border border-amber-200 rounded-lg p-2 space-y-1"><template x-for="(it, k) in o.items" :key="k"><div class="text-xs"><p class="font-bold text-slate-800" x-text="it.qty + ' x ' + it.name"></p><p x-show="it.detail" class="text-slate-600" x-text="'→ ' + it.detail"></p></div></template></div>
 <p x-show="o.note" class="text-xs bg-white border border-amber-200 rounded-lg p-2 text-slate-700" x-text="'📝 ' + o.note"></p>
 <template x-if="o.payMethod === 'cash'"><div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs"><span class="font-bold text-emerald-800">💵 Pago en Efectivo</span><br><span x-text="'Llevar cambio de: ' + formatMoney(o.change) + ' (Paga con: ' + formatMoney(o.paidWith) + ')'"></span></div></template>
 <template x-if="o.payMethod === 'transfer'"><div class="bg-sky-50 border border-sky-200 rounded-lg p-2 text-xs space-y-1.5"><span class="font-bold text-sky-800">🏦 Pago por Transferencia</span><div class="flex space-x-2"><button @click="viewProof(o)" class="flex-1 bg-white border border-sky-300 text-sky-700 font-bold py-1.5 rounded-lg">👁 Ver comprobante</button><button @click="markPaid(o)" :disabled="o.paid" :class="o.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-600 text-white'" class="flex-1 font-bold py-1.5 rounded-lg" x-text="o.paid ? '✔ Pago recibido' : 'Confirmar pago recibido'"></button></div></div></template>
 <template x-if="!o.payMethod"><p class="text-[11px] text-slate-400">Método de pago no indicado</p></template>
 <div class="flex items-center space-x-2"><label class="text-[11px] font-bold text-slate-600">Minutos</label><input type="number" inputmode="numeric" min="1" :value="o.prepMinutes || 15" @input="etaInputs[o.id] = $event.target.value" class="w-16 text-base p-1.5 border border-slate-300 rounded-lg text-center"><button @click="updateEta(o)" class="flex-1 bg-brand-600 text-white font-bold py-1.5 rounded-lg text-xs">Actualizar tiempo</button></div>
-<div class="flex space-x-2 pt-1"><button @click="confirmOrder(o)" :disabled="o.payMethod === 'transfer' && !o.paid" class="flex-1 bg-emerald-600 disabled:opacity-40 text-white font-bold py-2 rounded-xl text-xs">✔ Confirmar</button><button @click="rejectOrder(o)" class="flex-1 bg-rose-100 text-rose-700 font-bold py-2 rounded-xl text-xs">✖ Rechazar</button></div>
+<div class="flex space-x-2 pt-1"><button @click="confirmOrder(o)" :disabled="o.payMethod === 'transfer' && !o.paid" class="flex-1 bg-emerald-600 disabled:opacity-40 text-white font-bold py-2 rounded-xl text-xs">✔ Pasar a En preparación</button><button @click="rejectOrder(o)" class="flex-1 bg-rose-100 text-rose-700 font-bold py-2 rounded-xl text-xs">✖ Rechazar</button></div>
 </div>
 </template>
 <div><h2 class="font-bold text-slate-800 text-base">Vendiendo en línea (hoy)</h2></div>
 <template x-if="confirmedToday.length === 0"><p class="text-center py-4 text-xs text-slate-400">Aún no hay pedidos confirmados hoy.</p></template>
 <template x-for="o in confirmedToday" :key="o.id">
 <div class="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
-<div class="flex justify-between items-start"><div><p class="font-bold text-slate-800 text-xs" x-text="o.customerName"></p><p class="text-[11px] text-slate-500" x-text="itemsText(o)"></p><p class="text-[10px] text-slate-400" x-text="payLabel(o) + ' · ' + statusLabel(o.status)"></p></div><span class="font-extrabold text-emerald-600 text-xs" x-text="'+ ' + formatMoney(o.total)"></span></div>
+<div class="flex justify-between items-start"><div><p class="font-bold text-slate-800 text-xs" x-text="orderNo(o) + ' · ' + o.customerName"></p><p class="text-[10px] text-slate-500" x-text="'📍 ' + (o.address || 'Sin dirección') + ' · ' + fmtFull(o.createdAt)"></p><p class="text-[11px] text-slate-500" x-text="itemsText(o)"></p><p class="text-[10px] text-slate-400" x-text="payLabel(o) + ' · ' + statusLabel(o.status)"></p></div><span class="font-extrabold text-emerald-600 text-xs" x-text="'+ ' + formatMoney(o.total)"></span></div>
 <template x-if="o.status === 'confirmed'"><div class="space-y-2">
 <div class="flex items-center space-x-2"><label class="text-[11px] font-bold text-slate-600">Minutos</label><input type="number" inputmode="numeric" min="1" :value="o.prepMinutes || 15" @input="etaInputs[o.id] = $event.target.value" class="w-16 text-base p-1.5 border border-slate-300 rounded-lg text-center"><button @click="updateEta(o)" class="flex-1 bg-brand-600 text-white font-bold py-1.5 rounded-lg text-xs">Actualizar tiempo</button></div>
-<button @click="markDelivered(o)" class="w-full bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-xs">📦 Marcar entregado</button>
+<button @click="markDelivered(o)" class="w-full bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-xs">📦 Listo / Entregado</button>
 </div></template>
 </div>
 </template>
@@ -606,8 +628,9 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 
 </main>
 
-<nav x-show="role === 'seller' || role === 'admin'" x-cloak class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
+<nav x-show="role === 'seller' || role === 'admin'" x-cloak class="bottom-nav overflow-x-auto [&_button]:px-2 [&_button]:whitespace-nowrap fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
 <button @click="activeTab = 'orders'" :class="activeTab === 'orders' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="relative flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🔔</span><span>Pedidos</span><span x-show="pendingOrders.length > 0" class="absolute -top-0.5 right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full px-1.5" x-text="pendingOrders.length"></span></button>
+<button x-show="role === 'admin'" @click="activeTab = 'catalog'" :class="activeTab === 'catalog' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-burger text-lg mb-0.5"></i><span>Catálogo</span></button>
 <button x-show="role === 'admin'" @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-chart-pie text-lg mb-0.5"></i><span>Diagnóstico</span></button>
 <button x-show="role === 'admin'" @click="activeTab = 'ingredients'" :class="activeTab === 'ingredients' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-boxes-stacked text-lg mb-0.5"></i><span>Insumos</span></button>
 <button @click="activeTab = 'dishes'" :class="activeTab === 'dishes' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><i class="fa-solid fa-burger text-lg mb-0.5"></i><span>Menú / Platos</span></button>
@@ -657,14 +680,8 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <form @submit.prevent="saveDish()" class="space-y-4">
 <div><label class="block text-xs font-bold text-slate-700 mb-1">Nombre del Plato</label>
 <input type="text" x-model="dishForm.name" required placeholder="Ej: Desayuno Completo, Baleada Especial" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
-<div class="grid grid-cols-2 gap-2">
-<div><label class="block text-xs font-bold text-slate-700 mb-1">Precio Venta (Lps)</label>
+<div><label class="block text-xs font-bold text-slate-700 mb-1">Precio de Venta al Cliente (Lps)</label>
 <input type="number" inputmode="decimal" step="0.01" x-model.number="dishForm.price" required placeholder="40.00" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
-<div><label class="block text-xs font-bold text-slate-700 mb-1">URL de la Foto</label>
-<input type="url" x-model="dishForm.image" placeholder="https://..." class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
-</div>
-<div><label class="block text-xs font-bold text-slate-700 mb-1">Descripción breve del plato</label>
-<input type="text" x-model="dishForm.desc" placeholder="Ej: Frijoles fritos, queso y mantequilla" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
 <div class="border-t pt-3">
 <div class="flex justify-between items-center mb-2">
 <label class="block text-xs font-bold text-slate-700">Ingredientes de la Receta</label>
@@ -798,23 +815,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <script>
 function appData() {
 return {
-activeTab: 'orders',
-custTab: 'menu',
-showAddressModal: false,
-tempAddress: '',
-openAddressModal() {
-  this.tempAddress = (this.cust && this.cust.address) || '';
-  this.showAddressModal = true;
-},
-saveAddress() {
-  if (!this.tempAddress.trim()) { this.showNotification('Escribe una dirección válida'); return; }
-  if (this.cust) {
-    this.cust.address = this.tempAddress.trim();
-    try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
-  }
-  this.showAddressModal = false;
-  this.showNotification('Dirección guardada');
-},
+activeTab: 'dashboard',
 historyFilter: 'today',
 showIngredientModal: false,
 showDishModal: false,
@@ -915,17 +916,11 @@ ingredients: [],
 dishes: [],
 history: [],
 ingredientForm: { name: '', totalCost: 0, units: 1, unitType: 'unidades', durabilityDays: 7 },
-dishForm: { name: '', price: 0, image: '', desc: '', recipe: [] },
+dishForm: { name: '', price: 0, recipe: [] },
 
 initApp() {
 this.loadStoredData(); this.loadBuild();
-try {
-  const s = localStorage.getItem('sabor_customer');
-  if (s) {
-    this.cust = JSON.parse(s);
-    if (this.cust && !this.cust.address) this.cust.address = '';
-  }
-} catch (e) {}
+try { const s = localStorage.getItem('sabor_customer'); if (s) this.cust = JSON.parse(s); } catch (e) {}
 const go = () => this.fbInit();
 if (window.FB) go(); else window.addEventListener('fb-ready', go);
 },
@@ -937,6 +932,7 @@ WA: '50494149886',
 SELLER_HASH: '495524c206230edb763905976e5aa95547e2e188141964663e397d9acdccbe34', ADMIN_HASH: 'f0f7e7adad0ca73a4a6b93620cb1767fdc062e946cf538beab9e4a2d15e189e7',
 async sha(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); },
 fbInit() {
+window.FB.watchCatalog(l => { this.catalog = l.sort((a, b) => (a.order || 0) - (b.order || 0)); });
 window.FB.watchMenu(m => { this.menuItems = m.items || []; this.menuInfo = Object.assign({ address: '' }, m.info || {}); this.menuBuild = m.build || { price: 60, options: [] }; });
 },
 goAuth(v) { this.authView = v; this.authPass = ''; this.authError = ''; },
@@ -950,16 +946,128 @@ custCreate() {
 const f = this.custForm;
 const phone = String(f.phone).replace(/\D/g, '');
 if (!f.name.trim()) { this.authError = 'Escribe tu nombre'; return; }
+if (String(f.address || '').trim().length < 5) { this.authError = 'Escribe tu dirección de entrega'; return; }
 if (phone.length < 8) { this.authError = 'Escribe un celular válido'; return; }
 if (String(f.pass).length < 4 || f.pass === '1234') { this.authError = 'Crea una clave de 4 o más caracteres (distinta de 1234)'; return; }
-this.cust = { name: f.name.trim(), phone: phone, pass: f.pass, address: (f.address || '').trim() };
+this.cust = { name: f.name.trim(), phone: phone, pass: f.pass, address: String(f.address || '').trim() };
 try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
 this.startCustomer();
 },
 resetPhone: '',
+catalog: [], custTab: 'menu', dishSel: null, dishPick: {}, dishQty: 1, dishMsg: '',
+showAddr: false, addrDraft: '', addrMsg: '', afterAddr: false,
+showCatEd: false, catEd: null, catPhotoUrl: '', catMsg: '',
+orderNo(o) { return '#' + (o.number ? String(o.number).padStart(5, '0') : String(o.id || '').slice(0, 5).toUpperCase()); },
+fmtFull(ts) {
+const d = new Date(ts); const M = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+let h = d.getHours(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+return String(d.getDate()).padStart(2, '0') + '/' + M[d.getMonth()] + '/' + d.getFullYear() + ' - ' + String(h).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ap;
+},
+mmss(s) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); },
+get trackOrder() { return this.myOrders.find(o => o.status === 'pending' || o.status === 'confirmed') || null; },
+get trackSecs() { const o = this.trackOrder; if (!o) return 0; return Math.max(0, Math.ceil(((o.etaAt || (o.createdAt + 900000)) - this.nowTs) / 1000)); },
+get trackMin() { return Math.ceil(this.trackSecs / 60); },
+get trackPct() { const o = this.trackOrder; const tot = ((o && o.prepMinutes) || 15) * 60; return Math.min(100, Math.max(0, 100 - this.trackSecs / tot * 100)); },
+openAddr() { this.addrMsg = ''; this.addrDraft = (this.cust && this.cust.address) || ''; this.showAddr = true; },
+saveAddr() {
+const a = String(this.addrDraft).trim();
+if (a.length < 5) { this.addrMsg = 'Escribe una dirección completa'; return; }
+this.cust.address = a;
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.showAddr = false;
+if (this.afterAddr) { this.afterAddr = false; this.openCheckout(); }
+},
+openDish(d) { this.dishSel = d; this.dishPick = {}; this.dishQty = 1; this.dishMsg = ''; },
+secHint(sec) {
+const mx = Number(sec.max) || 0;
+if (sec.type === 'single') return sec.required ? '(obligatorio: 1)' : '(opcional, máx. 1)';
+return sec.required ? '(obligatorio' + (mx ? ', hasta ' + mx : '') + ')' : '(opcional' + (mx ? ', hasta ' + mx : '') + ')';
+},
+isPicked(si, name) { return (this.dishPick[si] || []).indexOf(name) >= 0; },
+togglePick(si, sec, name) {
+const arr = (this.dishPick[si] || []).slice(); const i = arr.indexOf(name); this.dishMsg = '';
+if (sec.type === 'single') { this.dishPick = Object.assign({}, this.dishPick, { [si]: (i >= 0 && !sec.required) ? [] : [name] }); return; }
+if (i >= 0) arr.splice(i, 1);
+else { const mx = Number(sec.max) || 0; if (mx && arr.length >= mx) { this.dishMsg = 'Máximo ' + mx + ' en ' + sec.title; return; } arr.push(name); }
+this.dishPick = Object.assign({}, this.dishPick, { [si]: arr });
+},
+get dishValid() {
+if (!this.dishSel) return false;
+return (this.dishSel.sections || []).every((sec, si) => { const n = (this.dishPick[si] || []).length; if (sec.type === 'single') return sec.required ? n === 1 : n <= 1; return sec.required ? n >= 1 : true; });
+},
+get dishUnit() {
+if (!this.dishSel) return 0; let t = Number(this.dishSel.price) || 0;
+(this.dishSel.sections || []).forEach((sec, si) => (this.dishPick[si] || []).forEach(n => { const o = sec.options.find(x => x.name === n); if (o) t += Number(o.extra) || 0; }));
+return t;
+},
+get dishTotal() { return this.dishUnit * this.dishQty; },
+addDishToCart() {
+if (!this.dishValid) { this.dishMsg = 'Completa las opciones obligatorias'; return; }
+const detail = (this.dishSel.sections || []).map((sec, si) => (this.dishPick[si] || []).join(', ')).filter(Boolean).join(' · ');
+this.customCart.push({ name: this.dishSel.name, detail: detail, price: this.dishUnit, qty: this.dishQty });
+this.dishSel = null; this.showNotification('Agregado al pedido');
+},
+openCatEd(d) {
+this.catMsg = '';
+this.catEd = d ? JSON.parse(JSON.stringify(d)) : { id: '', name: '', desc: '', price: 0, photo: '', sections: [] };
+if (!this.catEd.sections) this.catEd.sections = [];
+this.catPhotoUrl = (this.catEd.photo && this.catEd.photo.indexOf('data:') !== 0) ? this.catEd.photo : '';
+this.showCatEd = true;
+},
+addSec() { this.catEd.sections.push({ title: '', type: 'single', required: true, max: 0, options: [{ name: '', extra: 0 }] }); },
+removeSec(i) { this.catEd.sections.splice(i, 1); },
+addOptCat(si) { this.catEd.sections[si].options.push({ name: '', extra: 0 }); },
+removeOptCat(si, oi) { this.catEd.sections[si].options.splice(oi, 1); },
+pickCatPhoto(ev) {
+const f = ev.target.files && ev.target.files[0]; if (!f) return;
+const rd = new FileReader();
+rd.onload = () => {
+const img = new Image();
+img.onload = () => {
+const k = Math.min(1, 480 / Math.max(img.width, img.height));
+const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+this.catEd.photo = c.toDataURL('image/jpeg', 0.6); this.catPhotoUrl = '';
+};
+img.onerror = () => { this.catMsg = 'No se pudo leer la imagen'; };
+img.src = rd.result;
+};
+rd.readAsDataURL(f);
+},
+async saveCat() {
+const d = JSON.parse(JSON.stringify(this.catEd));
+if (!String(d.name).trim()) { this.catMsg = 'Escribe el nombre del plato'; return; }
+d.name = d.name.trim(); d.desc = String(d.desc || '').trim(); d.price = Number(d.price) || 0;
+for (const sec of d.sections) {
+sec.title = String(sec.title || '').trim();
+sec.options = (sec.options || []).map(o => ({ name: String(o.name || '').trim(), extra: Number(o.extra) || 0 })).filter(o => o.name);
+sec.max = sec.type === 'multi' ? (Number(sec.max) || 0) : 0; sec.required = !!sec.required;
+if (!sec.title) { this.catMsg = 'Cada sección necesita un título'; return; }
+if (sec.options.length === 0) { this.catMsg = 'La sección "' + sec.title + '" necesita al menos una opción'; return; }
+}
+d.id = d.id || ('d' + Date.now()); if (!d.order) d.order = Date.now();
+try { await window.FB.saveDish(d); this.showCatEd = false; this.showNotification('Plato guardado y sincronizado'); } catch (e) { this.catMsg = 'No se pudo guardar. Revisa Internet'; }
+},
+async delCat(d) {
+if (!window.confirm('¿Eliminar "' + d.name + '" del catálogo?')) return;
+try { await window.FB.deleteDish(d.id); this.showNotification('Plato eliminado'); } catch (e) { this.showNotification('No se pudo eliminar. Revisa Internet'); }
+},
+async seedCatalog() {
+const eggs = ['Huevo picado', 'Huevo en torta', 'Huevo con tomate y cebolla', 'Huevo cocido'].map(n => ({ name: n, extra: 0 })).concat([{ name: 'Huevo picado con chorizo', extra: 15 }]);
+const comps = ['Frijoles fritos', 'Frijoles parados', 'Frijoles salteados', 'Plátano maduro', 'Mantequilla', 'Queso', 'Quesillo', 'Aguacate'].map(n => ({ name: n, extra: 0 }));
+const list = [
+{ id: 'd' + Date.now(), name: 'Arma tu desayuno', desc: 'Huevo + hasta 3 complementos + acompañamiento', price: 60, photo: '', order: 1, sections: [
+{ title: 'Elige tu huevo', type: 'single', required: true, max: 0, options: eggs },
+{ title: 'Elige tus complementos', type: 'multi', required: true, max: 3, options: comps },
+{ title: 'Acompañamiento', type: 'single', required: true, max: 0, options: [{ name: 'Tortillas de maíz (2 uds.)', extra: 0 }, { name: 'Pan blanco', extra: 0 }] }] },
+{ id: 'd' + (Date.now() + 1), name: 'Baleadas', desc: 'Tortilla de harina con frijoles, mantequilla y queso', price: 25, photo: '', order: 2, sections: [
+{ title: 'Extras', type: 'multi', required: false, max: 0, options: [{ name: 'Huevo', extra: 10 }, { name: 'Aguacate', extra: 10 }, { name: 'Queso extra', extra: 5 }] }] }
+];
+try { for (const d of list) await window.FB.saveDish(d); this.showNotification('Ejemplos cargados'); } catch (e) { this.showNotification('No se pudo cargar. Revisa Internet'); }
+},
 showCheckout: false, payMethod: '', paidWith: '', proofData: '', proofName: '', checkoutMsg: '', showMyOrders: false,
 showProof: false, proofView: { loading: false, err: '', data: '', name: '' }, etaInputs: {},
-statusLabel(s) { return { pending: 'Esperando confirmación', confirmed: 'En preparación', delivered: 'Entregado', rejected: 'Rechazado' }[s] || s; },
+statusLabel(s) { return { pending: 'Pendiente', confirmed: 'En preparación', delivered: 'Entregado', rejected: 'Cancelado' }[s] || s; },
 payLabel(o) { return o.payMethod === 'cash' ? 'Efectivo' : (o.payMethod === 'transfer' ? 'Transferencia' : 'No indicado'); },
 async markPaid(o) {
 try { await window.FB.updateOrder(o.id, { paid: true, paidAt: Date.now() }); this.showNotification('Pago confirmado'); } catch (e) { this.showNotification('No se pudo confirmar. Revisa Internet'); }
@@ -1065,6 +1173,7 @@ this.startCustomer();
 },
 startCustomer() {
 this.role = 'customer'; this.authError = '';
+if (!this.timerId) this.timerId = setInterval(() => { this.nowTs = Date.now(); }, 1000);
 if (window.FB) this.unsubs.push(window.FB.watchMyOrders(this.cust.phone, l => { this.myOrders = l; }));
 },
 async sellerEnter() {
@@ -1104,15 +1213,15 @@ o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.3); t += 0.3;
 },
 logout() {
 this.unsubs.forEach(u => { try { u(); } catch (e) {} }); this.unsubs = [];
-this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.cart = {}; this.orderSent = null; this.showCustPass = false;
+this.role = null; this.custTab = 'menu'; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.cart = {}; this.orderSent = null; this.showCustPass = false;
 },
-itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name).join(', '); },
+itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name + (i.detail ? ' (' + i.detail + ')' : '')).join(', '); },
 changeQty(item, d) { const q = Math.max(0, (this.cart[item.name] || 0) + d); this.cart = Object.assign({}, this.cart, { [item.name]: q }); },
-get visibleMenu() { return (this.menuItems && this.menuItems.length > 0) ? this.menuItems : this.dishes; },
-get cartItems() { return this.visibleMenu.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, price: c.price, qty: c.qty }))); },
+get cartItems() { return this.menuItems.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, detail: c.detail || '', price: c.price, qty: c.qty }))); },
 get cartTotal() { return this.cartItems.reduce((a, i) => a + i.price * i.qty, 0); },
 openCheckout() {
 this.orderMsg = '';
+if (this.cust && !this.cust.address) { this.addrMsg = 'Primero escribe tu dirección de entrega'; this.addrDraft = ''; this.afterAddr = true; this.showAddr = true; return; }
 if (this.cartItems.length === 0) { this.orderMsg = 'Agrega al menos un plato o arma tu desayuno'; return; }
 this.payMethod = ''; this.paidWith = ''; this.proofData = ''; this.proofName = ''; this.checkoutMsg = ''; this.showCheckout = true;
 },
@@ -1150,12 +1259,13 @@ async sendOrder() {
 if (!this.checkoutValid) return;
 this.busy = true; this.checkoutMsg = '';
 const now = Date.now();
-const order = { customerName: this.cust.name, phone: this.cust.phone, address: (this.cust && this.cust.address) || '', items: this.cartItems, note: this.orderNote.trim(), total: this.cartTotal, status: 'pending', createdAt: now, payMethod: this.payMethod, paid: false, prepMinutes: 15, etaAt: now + 900000 };
+const order = { customerName: this.cust.name, phone: this.cust.phone, address: this.cust.address || '', items: this.cartItems, note: this.orderNote.trim(), total: this.cartTotal, status: 'pending', createdAt: now, payMethod: this.payMethod, paid: false, prepMinutes: 15, etaAt: now + 900000 };
 if (this.payMethod === 'cash') { order.paidWith = Number(this.paidWith); order.change = Number(this.paidWith) - this.cartTotal; }
 try {
 if (this.payMethod === 'transfer') { order.proofId = await window.FB.addProof(this.proofData, this.proofName); }
+order.number = await window.FB.nextOrderNo();
 await window.FB.addOrder(order);
-this.orderSent = order; this.cart = {}; this.customCart = []; this.orderNote = ''; this.showCheckout = false; this.custTab = 'status'; this.startThanks();
+this.orderSent = order; this.cart = {}; this.customCart = []; this.orderNote = ''; this.showCheckout = false; this.custTab = 'order'; this.startThanks();
 } catch (e) { this.checkoutMsg = 'No se pudo enviar. Revisa tu Internet e intenta de nuevo.'; }
 this.busy = false;
 },
@@ -1194,7 +1304,7 @@ const a = window.prompt('Dirección del negocio (se muestra a los clientes):', a
 if (a === null) return;
 try { localStorage.setItem('sabor_address', a); } catch (e) {}
 try {
-await window.FB.publishMenu({ items: this.dishes.map(d => ({ name: d.name, price: Number(d.price), image: d.image || '', desc: d.desc || '' })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } });
+await window.FB.publishMenu({ items: this.dishes.map(d => ({ name: d.name, price: Number(d.price) })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } });
 this.showNotification('Menú publicado para los clientes');
 } catch (e) { this.showNotification('No se pudo publicar. Revisa Internet'); }
 },
@@ -1294,7 +1404,7 @@ return Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
 
 openDishModal() {
 this.editingDishId = null;
-this.dishForm = { name: '', price: 0, image: '', desc: '', recipe: [] };
+this.dishForm = { name: '', price: 0, recipe: [] };
 this.addRecipeRow();
 this.showDishModal = true;
 },
@@ -1431,7 +1541,7 @@ todayDateFormatted() { return new Date().toLocaleDateString('es-HN', { weekday: 
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, getDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, getDoc, deleteDoc, runTransaction, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 const app = initializeApp({
   apiKey: "AIzaSyD8-tWvD-AhoWDrCUcqsyphpaCVtE6QMkI",
   authDomain: "saborcontrol-30cbd.firebaseapp.com",
@@ -1446,6 +1556,10 @@ const toList = s => s.docs.map(d => ({ id: d.id, ...d.data() }));
 window.FB = {
   addOrder: o => addDoc(collection(db, "orders"), o),
   updateOrder: (id, f) => updateDoc(doc(db, "orders", id), f),
+  nextOrderNo: async () => { try { return await runTransaction(db, async tx => { const r = doc(db, "meta", "counter"); const s = await tx.get(r); const n = (s.exists() ? s.data().n : 1000) + 1; tx.set(r, { n }); return n; }); } catch (e) { return Math.floor(Date.now() / 1000) % 100000; } },
+  watchCatalog: cb => onSnapshot(collection(db, "catalog"), s => cb(toList(s)), err),
+  saveDish: d => setDoc(doc(db, "catalog", d.id), d),
+  deleteDish: id => deleteDoc(doc(db, "catalog", id)),
   addProof: async (data, name) => (await addDoc(collection(db, "proofs"), { data, name, createdAt: Date.now() })).id,
   getProof: async id => { const s = await getDoc(doc(db, "proofs", id)); return s.exists() ? s.data() : null; },
   setOrderStatus: (id, status, by) => updateDoc(doc(db, "orders", id), { status, by, confirmedAt: Date.now() }),
