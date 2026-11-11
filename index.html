@@ -108,6 +108,33 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </div>
 </div>
 
+<!-- DETALLE DEL PLATO (CLIENTE) -->
+<div x-show="showItem" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
+<div class="bg-white w-full max-w-md rounded-t-2xl max-h-[92vh] overflow-y-auto" x-show="itemSel">
+<div class="relative h-48 bg-slate-100 flex items-center justify-center overflow-hidden rounded-t-2xl">
+<template x-if="itemSel && itemSel.image"><img :src="itemSel.image" class="w-full h-full object-cover"></template>
+<template x-if="itemSel && !itemSel.image"><span class="text-6xl opacity-60">🍽️</span></template>
+<button @click="showItem = false" class="absolute top-2 right-2 bg-white/90 text-slate-700 rounded-full w-8 h-8 font-bold shadow">✕</button>
+</div>
+<div class="p-5 space-y-3">
+<div><h3 class="font-extrabold text-slate-800 text-lg" x-text="itemSel ? itemSel.name : ''"></h3>
+<p class="text-xs text-slate-500" x-text="itemSel ? (itemSel.desc || 'Desayuno fresco hecho al momento') : ''"></p>
+<p class="text-sm text-brand-600 font-extrabold mt-1" x-text="itemSel ? 'Precio: ' + formatMoney(itemSel.price) : ''"></p></div>
+<template x-if="itemSel && itemSel.comps && itemSel.comps.length > 0"><div class="space-y-2">
+<h4 class="text-xs font-bold uppercase text-slate-500">Complementos</h4>
+<template x-for="(c, ci) in itemSel.comps" :key="ci">
+<button type="button" @click="toggleComp(ci)" :class="itemComps.includes(ci) ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-slate-50'" class="w-full flex justify-between items-center border-2 rounded-xl p-2.5 text-sm text-left">
+<span class="font-bold text-slate-800" x-text="(itemComps.includes(ci) ? '✅ ' : '⬜ ') + c.name"></span>
+<span class="font-extrabold text-brand-600" x-text="'+ ' + formatMoney(c.price)"></span>
+</button></template>
+</div></template>
+<div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800">Total</span><strong class="text-brand-700 text-base" x-text="formatMoney(itemPrice)"></strong></div>
+<button @click="addItem(true)" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl">🛒 Comprar ahora</button>
+<button @click="addItem(false)" class="w-full bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold py-3 rounded-xl">＋ Agregar y seguir comprando</button>
+</div>
+</div>
+</div>
+
 <!-- COMPROBANTE (VENDEDORA) -->
 <div x-show="showProof" x-cloak class="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4">
 <div class="bg-white w-full max-w-md rounded-2xl p-4 space-y-3 max-h-[92vh] overflow-y-auto">
@@ -238,7 +265,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div x-show="custTab === 'menu'" class="p-4 space-y-4 flex-1">
 <button @click="openBuild()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-2xl p-4 shadow-lg text-left active:scale-95 transition"><span class="block text-[10px] font-extrabold uppercase tracking-wider">⭐ Premium</span><span class="block font-extrabold text-base">Arma tu desayuno a tu gusto</span><span class="block text-sm font-bold" x-text="'Por ' + formatMoney(buildBase) + ' · huevo + 3 complementos + acompañamiento'"></span></button>
 
-<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu desayuno personalizado</h3>
+<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tus platos con complementos</h3>
 <template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="c.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price)"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
 
 <div class="flex justify-between items-center pt-1"><h2 class="font-bold text-slate-800 text-base">Menú del Día</h2><span class="text-xs text-slate-400" x-text="visibleMenu.length + ' platos'"></span></div>
@@ -248,13 +275,14 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div class="grid grid-cols-2 gap-3">
 <template x-for="item in visibleMenu" :key="item.name">
 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition">
-<div class="relative h-32 bg-slate-100 flex items-center justify-center overflow-hidden border-b border-slate-100">
+<div @click="openItem(item)" class="relative h-32 bg-slate-100 flex items-center justify-center overflow-hidden border-b border-slate-100 cursor-pointer">
 <template x-if="item.image"><img :src="item.image" class="w-full h-full object-cover" loading="lazy"></template>
 <template x-if="!item.image"><span class="text-4xl opacity-60">🍽️</span></template>
 </div>
 <div class="p-3 flex-1 flex flex-col justify-between space-y-2">
-<div>
+<div @click="openItem(item)" class="cursor-pointer">
 <p class="font-bold text-slate-800 text-xs line-clamp-1" x-text="item.name"></p>
+<p x-show="item.comps && item.comps.length" class="text-[10px] font-bold text-amber-600">⭐ Con complementos</p>
 <p class="text-[11px] text-slate-400 line-clamp-1" x-text="item.desc || 'Desayuno fresco hecho al momento'"></p>
 <p class="text-xs text-brand-600 font-extrabold mt-1" x-text="formatMoney(item.price)"></p>
 </div>
@@ -698,6 +726,15 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </template>
 <div><label class="block text-xs font-bold text-slate-700 mb-1">Descripción breve del plato</label>
 <input type="text" x-model="dishForm.desc" placeholder="Ej: Frijoles fritos, queso y mantequilla" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+<div class="flex justify-between items-center"><label class="text-xs font-bold text-amber-800">⭐ Complementos (se suman al precio)</label><button type="button" @click="dishForm.comps.push({ name: '', price: 0 })" class="text-xs font-bold text-brand-600">＋ Agregar</button></div>
+<template x-for="(c, ci) in dishForm.comps" :key="ci"><div class="flex items-center gap-2">
+<input type="text" x-model="c.name" placeholder="Ej: Queso extra" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none">
+<input type="number" inputmode="decimal" step="0.01" min="0" x-model.number="c.price" placeholder="Lps" class="w-20 text-base p-2 border border-slate-300 rounded-xl focus:outline-none">
+<button type="button" @click="dishForm.comps.splice(ci, 1)" class="text-rose-600 font-bold px-1">✕</button>
+</div></template>
+<p x-show="dishForm.comps.length === 0" class="text-[11px] text-amber-700">Sin complementos. Toca "Agregar" para crear el primero.</p>
+</div>
 <div class="border-t pt-3">
 <div class="flex justify-between items-center mb-2">
 <label class="block text-xs font-bold text-slate-700">Ingredientes de la Receta</label>
@@ -948,7 +985,7 @@ ingredients: [],
 dishes: [],
 history: [],
 ingredientForm: { name: '', totalCost: 0, units: 1, unitType: 'unidades', durabilityDays: 7 },
-dishForm: { name: '', price: 0, image: '', desc: '', recipe: [] },
+dishForm: { name: '', price: 0, image: '', desc: '', recipe: [], comps: [] },
 
 initApp() {
 this.loadStoredData(); this.loadBuild();
@@ -1014,7 +1051,7 @@ async markDelivered(o) {
 try { await window.FB.updateOrder(o.id, { status: 'delivered', deliveredAt: Date.now() }); this.showNotification('Pedido entregado'); } catch (e) { this.showNotification('No se pudo marcar. Revisa Internet'); }
 },
 build: { price: 60, options: [] }, menuBuild: { price: 60, options: [] }, newOpt: { name: '', cat: 'Proteína' },
-customCart: [], showBuild: false, buildSel: {}, buildMsg: '', showThanks: false, nowTs: Date.now(), timerId: null,
+customCart: [], showItem: false, itemSel: null, itemComps: [], showBuild: false, buildSel: {}, buildMsg: '', showThanks: false, nowTs: Date.now(), timerId: null,
 loadBuild() { try { const b = localStorage.getItem('sabor_build'); if (b) this.build = JSON.parse(b); } catch (e) {} },
 saveBuild() { try { localStorage.setItem('sabor_build', JSON.stringify(this.build)); } catch (e) {} },
 addOpt() {
@@ -1140,6 +1177,16 @@ this.unsubs.forEach(u => { try { u(); } catch (e) {} }); this.unsubs = [];
 this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.cart = {}; this.orderSent = null; this.showCustPass = false;
 },
 itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name).join(', '); },
+openItem(item) { this.itemSel = item; this.itemComps = []; this.showItem = true; },
+toggleComp(i) { const k = this.itemComps.indexOf(i); if (k >= 0) this.itemComps.splice(k, 1); else this.itemComps.push(i); },
+get itemPrice() { const it = this.itemSel; if (!it) return 0; return (Number(it.price) || 0) + (it.comps || []).reduce((a, c, i) => a + (this.itemComps.includes(i) ? (Number(c.price) || 0) : 0), 0); },
+addItem(buy) {
+const it = this.itemSel; if (!it) return;
+if (this.itemComps.length === 0) { this.changeQty(it, 1); }
+else { const names = this.itemComps.slice().sort((a, b) => a - b).map(i => it.comps[i].name); this.customCart.push({ name: it.name + ' + ' + names.join(', '), price: this.itemPrice, qty: 1 }); }
+this.showItem = false;
+if (buy) this.openCheckout(); else this.showNotification('Agregado al pedido. ¡Sigue comprando!');
+},
 changeQty(item, d) { const q = Math.max(0, (this.cart[item.name] || 0) + d); this.cart = Object.assign({}, this.cart, { [item.name]: q }); },
 get visibleMenu() { return (this.menuItems && this.menuItems.length > 0) ? this.menuItems : this.dishes; },
 get cartItems() { return this.visibleMenu.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, price: c.price, qty: c.qty }))); },
@@ -1227,7 +1274,7 @@ const a = window.prompt('Dirección del negocio (se muestra a los clientes):', a
 if (a === null) return;
 try { localStorage.setItem('sabor_address', a); } catch (e) {}
 try {
-await window.FB.publishMenu({ items: this.dishes.map(d => ({ name: d.name, price: Number(d.price), image: d.image || '', desc: d.desc || '' })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } });
+await window.FB.publishMenu({ items: this.dishes.map(d => ({ name: d.name, price: Number(d.price), image: d.image || '', desc: d.desc || '', comps: (d.comps || []).map(c => ({ name: c.name, price: Number(c.price) || 0 })) })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } });
 this.showNotification('Menú publicado para los clientes');
 } catch (e) { this.showNotification('No se pudo publicar. Revisa Internet'); }
 },
@@ -1351,20 +1398,20 @@ pickDishPhoto(ev) {
 },
 openDishModal() {
 this.editingDishId = null;
-this.dishForm = { name: '', price: 0, image: '', desc: '', recipe: [] };
+this.dishForm = { name: '', price: 0, image: '', desc: '', recipe: [], comps: [] };
 this.addRecipeRow();
 this.showDishModal = true;
 },
 editDish(dish) {
 this.editingDishId = dish.id;
-this.dishForm = JSON.parse(JSON.stringify(dish));
+this.dishForm = JSON.parse(JSON.stringify(dish)); if (!this.dishForm.comps) this.dishForm.comps = [];
 this.showDishModal = true;
 },
 addRecipeRow() { this.dishForm.recipe.push({ ingredientId: '', portion: '1' }); },
 removeRecipeRow(index) { this.dishForm.recipe.splice(index, 1); },
 saveDish() {
 if (!this.dishForm.name.trim()) return;
-this.dishForm.recipe = this.dishForm.recipe.filter(r => r.ingredientId);
+this.dishForm.recipe = this.dishForm.recipe.filter(r => r.ingredientId); this.dishForm.comps = (this.dishForm.comps || []).filter(c => c.name && c.name.trim()).map(c => ({ name: c.name.trim(), price: Number(c.price) || 0 }));
 if (this.editingDishId) {
 const index = this.dishes.findIndex(d => d.id === this.editingDishId);
 if (index !== -1) this.dishes[index] = { ...this.dishForm, id: this.editingDishId };
