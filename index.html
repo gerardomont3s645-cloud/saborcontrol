@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>SaborControl - Control de Costos y Ventas</title>
+<title>Golosa - Desayunos &amp; Comidas Rápidas</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script>
 tailwind.config={theme:{extend:{colors:{brand:{50:'#f5f3ff',100:'#ede9fe',200:'#ddd6fe',400:'#a78bfa',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',800:'#5b21b6',900:'#4c1d95'}}}}}
@@ -55,21 +55,6 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <button type="button" @click="saveAddress()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md">Guardar Dirección</button>
 </div>
 </div>
-</div>
-
-<!-- DETALLE DEL PLATO (CLIENTE) -->
-<div x-show="itemSel" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-end justify-center">
-<template x-if="itemSel"><div class="bg-white w-full max-w-md rounded-t-2xl max-h-[94vh] overflow-y-auto">
-<div class="h-48 bg-slate-100 flex items-center justify-center overflow-hidden relative"><img x-show="itemSel.image" :src="itemSel.image || ''" class="w-full h-full object-cover"><span x-show="!itemSel.image" class="text-6xl">🍳</span><button @click="itemSel = null" class="absolute top-2 right-2 bg-white/90 w-8 h-8 rounded-full text-slate-700 font-bold">✕</button></div>
-<div class="p-5 space-y-4">
-<div><h3 class="font-extrabold text-slate-800 text-lg" x-text="itemSel.name"></h3><p x-show="itemSel.desc" class="text-xs text-slate-500" x-text="itemSel.desc"></p><p class="text-sm text-brand-600 font-extrabold mt-1" x-text="formatMoney(itemSel.price)"></p></div>
-<div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-3"><span class="text-sm font-bold text-slate-700">¿Cuántas órdenes quieres?</span><div class="flex items-center space-x-2"><button type="button" @click="itemQty = Math.max(1, itemQty - 1)" class="w-9 h-9 rounded-lg bg-white border border-slate-200 font-bold">−</button><span class="w-8 text-center font-extrabold" x-text="itemQty"></span><button type="button" @click="itemQty = itemQty + 1" class="w-9 h-9 rounded-lg bg-brand-600 text-white font-bold">+</button></div></div>
-<template x-if="(itemSel.addons || []).length > 0"><div><h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Agregar complementos</h4>
-<div class="space-y-1.5"><template x-for="a in itemSel.addons" :key="a.name"><button type="button" @click="toggleAddon(a.name)" :class="itemAddons.indexOf(a.name) >= 0 ? 'bg-brand-50 border-brand-500 text-brand-800' : 'bg-white border-slate-200 text-slate-700'" class="w-full border-2 rounded-xl p-3 text-sm font-bold flex justify-between items-center"><span x-text="(itemAddons.indexOf(a.name) >= 0 ? '☑ ' : '☐ ') + a.name"></span><span class="text-brand-700" x-text="Number(a.price) > 0 ? '+ ' + formatMoney(a.price) : 'Gratis'"></span></button></template></div></div></template>
-<div class="flex justify-between items-center bg-brand-50 border border-brand-100 rounded-xl p-3"><span class="text-sm text-brand-800" x-text="itemQty + ' x ' + formatMoney(itemUnit)"></span><strong class="text-brand-700 text-base" x-text="formatMoney(itemTotal)"></strong></div>
-<button @click="buyItem()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-md" x-text="'🛒 Comprar • ' + formatMoney(itemTotal)"></button>
-<button @click="addItemAndContinue()" class="w-full text-xs font-bold text-brand-600 underline">＋ Agregar al pedido y seguir comprando</button>
-</div></div></template>
 </div>
 
 <!-- CHECKOUT / METODO DE PAGO -->
@@ -173,7 +158,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 
 <!-- ACCESO -->
 <div x-show="!role" x-cloak class="flex-1 min-h-screen bg-gradient-to-b from-brand-700 to-indigo-600 text-white p-6 flex flex-col justify-center space-y-4">
-<div class="text-center space-y-1"><div class="text-5xl">🍴</div><h1 class="text-2xl font-extrabold">SaborControl</h1><p class="text-sm text-brand-100">Desayunos &amp; Comidas Rápidas</p></div>
+<div class="text-center space-y-1"><div class="text-6xl">👩‍🍳</div><h1 class="text-2xl font-extrabold">¡Golosa te da la bienvenida!</h1><p class="text-base font-bold text-white" x-text="cust && cust.name ? cust.name : 'Estimado cliente'"></p><p class="text-sm text-brand-100">Desayunos &amp; Comidas Rápidas</p></div>
 <template x-if="authView === 'home'"><div class="space-y-3">
 <button @click="goAuth('custLogin')" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl shadow-md">🛒 Soy cliente</button>
 <button @click="goAuth('sellerLogin')" class="w-full bg-amber-400 text-slate-900 font-bold py-3 rounded-xl shadow-md">🧑‍🍳 Soy vendedora</button>
@@ -224,10 +209,23 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <!-- CLIENTE -->
 <div x-show="role === 'customer'" x-cloak class="flex-1 flex flex-col pb-20">
 <!-- HEADER CLIENTE -->
-<div class="bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white p-4 sticky top-0 z-30 shadow-md">
-<div class="flex justify-between items-center mb-2">
-<div><h1 class="font-extrabold text-lg">🍴 SaborControl</h1><p class="text-xs text-brand-100" x-text="cust ? 'Hola, ' + cust.name : ''"></p></div>
-<button @click="logout()" class="bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">Salir</button>
+<div class="bg-gradient-to-r from-brand-800 via-brand-700 to-indigo-700 text-white p-4 sticky top-0 z-30 shadow-md">
+<!-- PORTADA / HERO COCINERA GOLOSA -->
+<div class="flex items-center justify-between gap-3 mb-3 pb-3 border-b border-white/15">
+  <div class="flex items-center gap-3">
+    <div class="relative w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center shrink-0 shadow-inner overflow-hidden border border-white/20">
+      <span class="text-3xl select-none">👩‍🍳</span>
+      <span class="absolute -bottom-1 -right-1 text-sm">🍳</span>
+    </div>
+    <div>
+      <h1 class="font-black text-base sm:text-lg leading-tight tracking-tight text-amber-300 drop-shadow-sm">¡Golosa te da la bienvenida!</h1>
+      <p class="text-xs font-semibold text-brand-100 flex items-center gap-1 mt-0.5">
+        <span>👋</span>
+        <span class="text-white font-bold" x-text="cust && cust.name ? cust.name : 'Estimado cliente'"></span>
+      </p>
+    </div>
+  </div>
+  <button @click="logout()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition shrink-0">Salir</button>
 </div>
 <!-- BARRA DE DIRECCIÓN PERMANENTE -->
 <div class="bg-black/20 rounded-xl p-2.5 flex items-center justify-between text-xs">
@@ -240,8 +238,8 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div x-show="custTab === 'menu'" class="p-4 space-y-4 flex-1">
 <button @click="openBuild()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-2xl p-4 shadow-lg text-left active:scale-95 transition"><span class="block text-[10px] font-extrabold uppercase tracking-wider">⭐ Premium</span><span class="block font-extrabold text-base">Arma tu desayuno a tu gusto</span><span class="block text-sm font-bold" x-text="'Por ' + formatMoney(buildBase) + ' · huevo + 3 complementos + acompañamiento'"></span></button>
 
-<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu pedido</h3>
-<template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="(c.qty || 1) + ' x ' + c.name"></p><p x-show="c.detail" class="text-[11px] text-slate-600" x-text="c.detail"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price * (c.qty || 1))"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
+<template x-if="customCart.length > 0"><div class="space-y-2"><h3 class="font-bold text-slate-800 text-sm">Tu desayuno personalizado</h3>
+<template x-for="(c, i) in customCart" :key="i"><div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3"><div class="min-w-0 mr-2"><p class="text-xs font-bold text-slate-800" x-text="c.name"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(c.price)"></p></div><button @click="customCart.splice(i, 1)" class="text-rose-600 text-xs font-bold">Quitar</button></div></template></div></template>
 
 <div class="flex justify-between items-center pt-1"><h2 class="font-bold text-slate-800 text-base">Menú del Día</h2><span class="text-xs text-slate-400" x-text="visibleMenu.length + ' platos'"></span></div>
 
@@ -249,10 +247,24 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <template x-if="visibleMenu.length === 0"><p class="text-xs text-slate-400 bg-slate-50 rounded-xl p-4 text-center">El menú aún no está disponible. Intenta más tarde.</p></template>
 <div class="grid grid-cols-2 gap-3">
 <template x-for="item in visibleMenu" :key="item.name">
-<button type="button" @click="openItem(item)" class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm text-left active:scale-95 transition flex flex-col">
-<div class="relative h-28 bg-slate-100 flex items-center justify-center overflow-hidden"><img x-show="item.image" :src="item.image || ''" class="w-full h-full object-cover"><span x-show="!item.image" class="text-4xl">🍳</span></div>
-<div class="p-3 space-y-0.5"><p class="font-bold text-slate-800 text-sm" x-text="item.name"></p><p class="text-sm text-brand-600 font-extrabold" x-text="formatMoney(item.price)"></p></div>
-</button>
+<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition">
+<div class="relative h-32 bg-slate-100 flex items-center justify-center overflow-hidden border-b border-slate-100">
+<template x-if="item.image"><img :src="item.image" class="w-full h-full object-cover" loading="lazy"></template>
+<template x-if="!item.image"><span class="text-4xl opacity-60">🍽️</span></template>
+</div>
+<div class="p-3 flex-1 flex flex-col justify-between space-y-2">
+<div>
+<p class="font-bold text-slate-800 text-xs line-clamp-1" x-text="item.name"></p>
+<p class="text-[11px] text-slate-400 line-clamp-1" x-text="item.desc || 'Desayuno fresco hecho al momento'"></p>
+<p class="text-xs text-brand-600 font-extrabold mt-1" x-text="formatMoney(item.price)"></p>
+</div>
+<div class="flex items-center justify-between pt-1">
+<button @click="changeQty(item, -1)" class="w-7 h-7 rounded-lg bg-slate-100 font-bold text-slate-700 active:bg-slate-200">−</button>
+<span class="text-xs font-bold" x-text="cart[item.name] || 0"></span>
+<button @click="changeQty(item, 1)" class="w-7 h-7 rounded-lg bg-brand-600 text-white font-bold active:bg-brand-700">+</button>
+</div>
+</div>
+</div>
 </template>
 </div>
 
@@ -324,9 +336,9 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <header x-show="role === 'seller' || role === 'admin'" x-cloak class="bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white p-4 sticky top-0 z-30 shadow-md">
 <div class="flex justify-between items-center">
 <div class="flex items-center space-x-2">
-<div class="bg-white/20 p-2 rounded-xl"><i class="fa-solid fa-utensils text-xl"></i></div>
+<div class="bg-white/20 p-2 rounded-xl text-xl">👩‍🍳</div>
 <div>
-<h1 class="font-extrabold text-lg leading-tight tracking-wide">SaborControl</h1>
+<h1 class="font-extrabold text-lg leading-tight tracking-wide">Golosa</h1>
 <p class="text-xs text-brand-100 flex items-center gap-1">Desayunos &amp; Comidas Rápidas <span class="inline-block w-2 h-2 rounded-full bg-emerald-400" title="Guardado local activo"></span></p>
 </div>
 </div>
@@ -511,15 +523,19 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div class="flex items-center space-x-2"><label class="text-xs font-bold text-slate-700 w-24">Precio base (Lps)</label><input type="number" inputmode="decimal" x-model.number="build.price" @change="saveBuild()" class="flex-1 min-w-0 text-base p-2 border border-slate-300 rounded-xl focus:outline-none"></div>
 <p class="text-[11px] text-slate-500">Las opciones (huevo, complementos y acompañamiento) son fijas. Huevo picado con chorizo suma Lps. 15.00. Si cambias el precio, toca "Publicar menú y complementos".</p>
 </div>
-<div x-show="role === 'seller' && menuItems.length > 0" class="space-y-2"><p class="font-bold text-slate-800 text-sm">Menú publicado para clientes</p>
-<div class="grid grid-cols-2 gap-3"><template x-for="m in menuItems" :key="m.name"><div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm"><div class="h-24 bg-slate-100 flex items-center justify-center overflow-hidden"><img x-show="m.image" :src="m.image || ''" class="w-full h-full object-cover"><span x-show="!m.image" class="text-3xl">🍳</span></div><div class="p-2.5"><p class="font-bold text-slate-800 text-xs line-clamp-1" x-text="m.name"></p><p class="text-[11px] text-slate-400 line-clamp-1" x-text="m.desc || ''"></p><p class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(m.price)"></p></div></div></template></div></div>
 <button x-show="role === 'admin'" @click="publishMenu()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md">📣 Publicar menú y complementos</button>
 <template x-if="dishSearch.trim() && filteredDishes.length === 0"><p class="text-center py-4 text-xs text-slate-400">No se encontró ningún plato con esa búsqueda.</p></template>
 <div class="space-y-3">
 <template x-for="dish in filteredDishes" :key="dish.id">
 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
 <div class="flex justify-between items-start mb-2">
-<div class="flex items-center space-x-3"><img x-show="dish.image" :src="dish.image || ''" class="w-14 h-14 rounded-xl object-cover shrink-0"><div><h3 @click="openSellModal(dish)" class="font-bold text-slate-800 text-base cursor-pointer" x-text="dish.name"></h3><span class="text-xs text-slate-500">Precio Venta: <strong class="text-slate-800" x-text="formatMoney(dish.price)"></strong></span></div></div>
+<div class="flex items-center space-x-3">
+  <div class="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+    <template x-if="dish.image"><img :src="dish.image" class="w-full h-full object-cover"></template>
+    <template x-if="!dish.image"><span class="text-2xl">🍽️</span></template>
+  </div>
+  <div><h3 @click="openSellModal(dish)" class="font-bold text-slate-800 text-sm cursor-pointer" x-text="dish.name"></h3><span class="text-xs text-brand-600 font-extrabold" x-text="formatMoney(dish.price)"></span></div>
+</div>
 <div class="flex space-x-1">
 <button @click="openSellModal(dish)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center mr-1"><i class="fa-solid fa-cash-register mr-1"></i> Vender</button>
 <button x-show="role === 'admin'" @click="editDish(dish)" class="text-slate-400 hover:text-brand-600 p-1 text-xs"><i class="fa-solid fa-pen"></i></button>
@@ -550,7 +566,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div class="bg-amber-50 border border-amber-300 rounded-2xl p-4 space-y-2">
 <div class="flex justify-between items-start"><div><p class="font-bold text-slate-800 text-sm" x-text="o.customerName"></p><p class="text-xs text-slate-500" x-text="'📞 ' + o.phone + ' · ' + formatDateTime(new Date(o.createdAt).toISOString())"></p></div><span class="font-extrabold text-brand-700 text-sm" x-text="formatMoney(o.total)"></span></div>
 <p class="text-xs font-bold text-slate-900 bg-white border border-amber-200 rounded-lg p-2">📍 Dirección: <span class="text-rose-700 font-extrabold" x-text="o.address || 'Sin dirección'"></span></p>
-<div class="bg-white border border-amber-200 rounded-lg p-2 space-y-1"><template x-for="(it, k) in o.items" :key="k"><div class="text-xs"><p class="font-bold text-slate-800" x-text="it.qty + ' x ' + it.name"></p><p x-show="it.detail" class="text-slate-600" x-text="'→ ' + it.detail"></p></div></template></div>
+<p class="text-xs text-slate-700" x-text="itemsText(o)"></p>
 <p x-show="o.note" class="text-xs bg-white border border-amber-200 rounded-lg p-2 text-slate-700" x-text="'📝 ' + o.note"></p>
 <template x-if="o.payMethod === 'cash'"><div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs"><span class="font-bold text-emerald-800">💵 Pago en Efectivo</span><br><span x-text="'Llevar cambio de: ' + formatMoney(o.change) + ' (Paga con: ' + formatMoney(o.paidWith) + ')'"></span></div></template>
 <template x-if="o.payMethod === 'transfer'"><div class="bg-sky-50 border border-sky-200 rounded-lg p-2 text-xs space-y-1.5"><span class="font-bold text-sky-800">🏦 Pago por Transferencia</span><div class="flex space-x-2"><button @click="viewProof(o)" class="flex-1 bg-white border border-sky-300 text-sky-700 font-bold py-1.5 rounded-lg">👁 Ver comprobante</button><button @click="markPaid(o)" :disabled="o.paid" :class="o.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-600 text-white'" class="flex-1 font-bold py-1.5 rounded-lg" x-text="o.paid ? '✔ Pago recibido' : 'Confirmar pago recibido'"></button></div></div></template>
@@ -663,23 +679,25 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div class="grid grid-cols-2 gap-2">
 <div><label class="block text-xs font-bold text-slate-700 mb-1">Precio Venta (Lps)</label>
 <input type="number" inputmode="decimal" step="0.01" x-model.number="dishForm.price" required placeholder="40.00" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
-<div><label class="block text-xs font-bold text-slate-700 mb-1">Foto del plato</label>
-<label class="block w-full text-center bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 rounded-xl text-xs cursor-pointer">📷 Subir de la galería<input type="file" accept="image/*" class="hidden" @change="pickDishPhoto($event)"></label></div>
+<div>
+<label class="block text-xs font-bold text-slate-700 mb-1">Foto del Plato</label>
+<label class="flex items-center justify-center gap-2 w-full bg-brand-50 hover:bg-brand-100 border-2 border-dashed border-brand-500 text-brand-700 font-bold p-3 rounded-xl text-xs cursor-pointer active:scale-95 transition shadow-sm">
+<span class="text-base">📸</span>
+<span>Subir / Tomar foto</span>
+<input type="file" accept="image/*" class="hidden" @change="pickDishPhoto($event)">
+</label>
 </div>
-<div x-show="dishForm.image" class="flex items-center space-x-3 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
-<img :src="dishForm.image || ''" class="w-20 h-20 rounded-xl object-cover border border-slate-200">
-<div class="flex-1 space-y-1.5"><p class="text-[11px] text-emerald-700 font-bold">✔ Foto cargada</p><button type="button" @click="dishForm.image = ''; dishPhotoUrl = ''" class="text-xs text-rose-600 font-bold">Quitar foto</button></div>
 </div>
-<p x-show="dishPhotoMsg" class="text-xs text-rose-600" x-text="dishPhotoMsg"></p>
-<div><label class="block text-xs font-bold text-slate-700 mb-1">…o pega la URL de una foto (opcional)</label>
-<input type="url" x-model="dishPhotoUrl" @change="dishForm.image = dishPhotoUrl" placeholder="https://..." class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+<!-- PREVISUALIZACIÓN DE LA FOTO -->
+<template x-if="dishForm.image">
+<div class="relative w-full h-36 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center">
+<img :src="dishForm.image" class="w-full h-full object-cover">
+<button type="button" @click="dishForm.image = ''" class="absolute top-2 right-2 bg-rose-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-lg">✕</button>
+<span class="absolute bottom-2 left-2 bg-slate-900/70 text-white text-[10px] px-2 py-0.5 rounded-md font-semibold">Foto lista</span>
+</div>
+</template>
 <div><label class="block text-xs font-bold text-slate-700 mb-1">Descripción breve del plato</label>
 <input type="text" x-model="dishForm.desc" placeholder="Ej: Frijoles fritos, queso y mantequilla" class="w-full text-base p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
-<div class="border-t pt-3 space-y-2">
-<div class="flex justify-between items-center"><label class="block text-xs font-bold text-slate-700">Agregar complementos (con precio)</label><button type="button" @click="dishForm.addons.push({ name: '', price: 0 })" class="text-xs text-brand-600 hover:text-brand-800 font-bold">＋ Agregar complemento</button></div>
-<p class="text-[11px] text-slate-500">El cliente los ve con su precio y se suman al total.</p>
-<template x-for="(ad, ai) in dishForm.addons" :key="ai"><div class="flex items-center space-x-2 bg-amber-50 p-2 rounded-xl border border-amber-200"><input type="text" x-model="ad.name" placeholder="Ej: Aguacate" class="flex-1 min-w-0 text-base p-1.5 border border-slate-300 rounded-lg focus:outline-none"><input type="number" inputmode="decimal" step="0.01" min="0" x-model.number="ad.price" placeholder="Lps" class="w-20 text-base p-1.5 border border-slate-300 rounded-lg focus:outline-none"><button type="button" @click="dishForm.addons.splice(ai, 1)" class="text-slate-400 hover:text-rose-600 p-1">✕</button></div></template>
-</div>
 <div class="border-t pt-3">
 <div class="flex justify-between items-center mb-2">
 <label class="block text-xs font-bold text-slate-700">Ingredientes de la Receta</label>
@@ -930,7 +948,7 @@ ingredients: [],
 dishes: [],
 history: [],
 ingredientForm: { name: '', totalCost: 0, units: 1, unitType: 'unidades', durabilityDays: 7 },
-dishForm: { name: '', price: 0, image: '', desc: '', addons: [], recipe: [] },
+dishForm: { name: '', price: 0, image: '', desc: '', recipe: [] },
 
 initApp() {
 this.loadStoredData(); this.loadBuild();
@@ -1049,7 +1067,7 @@ async enableBio() {
 try {
 const cred = await navigator.credentials.create({ publicKey: {
 challenge: crypto.getRandomValues(new Uint8Array(32)),
-rp: { name: 'SaborControl' },
+rp: { name: 'Golosa' },
 user: { id: new TextEncoder().encode(this.cust.phone), name: this.cust.phone, displayName: this.cust.name },
 pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
 authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
@@ -1121,10 +1139,10 @@ logout() {
 this.unsubs.forEach(u => { try { u(); } catch (e) {} }); this.unsubs = [];
 this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.cart = {}; this.orderSent = null; this.showCustPass = false;
 },
-itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name + (i.detail ? ' (' + i.detail + ')' : '')).join(', '); },
+itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name).join(', '); },
 changeQty(item, d) { const q = Math.max(0, (this.cart[item.name] || 0) + d); this.cart = Object.assign({}, this.cart, { [item.name]: q }); },
 get visibleMenu() { return (this.menuItems && this.menuItems.length > 0) ? this.menuItems : this.dishes; },
-get cartItems() { return this.visibleMenu.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, detail: c.detail || '', price: c.price, qty: c.qty || 1 }))); },
+get cartItems() { return this.visibleMenu.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, price: c.price, qty: c.qty }))); },
 get cartTotal() { return this.cartItems.reduce((a, i) => a + i.price * i.qty, 0); },
 openCheckout() {
 this.orderMsg = '';
@@ -1209,9 +1227,7 @@ const a = window.prompt('Dirección del negocio (se muestra a los clientes):', a
 if (a === null) return;
 try { localStorage.setItem('sabor_address', a); } catch (e) {}
 try {
-const payload = { items: this.dishes.map(d => ({ name: d.name, price: Number(d.price), image: d.image || '', desc: d.desc || '', addons: (d.addons || []).filter(a => a.name).map(a => ({ name: a.name, price: Number(a.price) || 0 })) })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } };
-if (JSON.stringify(payload).length > 900000) { this.showNotification('El menú pesa mucho. Usa fotos más pequeñas o menos platos'); return; }
-await window.FB.publishMenu(payload);
+await window.FB.publishMenu({ items: this.dishes.map(d => ({ name: d.name, price: Number(d.price), image: d.image || '', desc: d.desc || '' })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } });
 this.showNotification('Menú publicado para los clientes');
 } catch (e) { this.showNotification('No se pudo publicar. Revisa Internet'); }
 },
@@ -1309,54 +1325,39 @@ expiry.setDate(expiry.getDate() + parseInt(item.durabilityDays));
 return Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
 },
 
-dishPhotoUrl: '', dishPhotoMsg: '',
-itemSel: null, itemQty: 1, itemAddons: [],
-openItem(item) { this.itemSel = item; this.itemQty = 1; this.itemAddons = []; },
-toggleAddon(name) { const i = this.itemAddons.indexOf(name); if (i >= 0) this.itemAddons.splice(i, 1); else this.itemAddons.push(name); },
-get itemUnit() { if (!this.itemSel) return 0; let t = Number(this.itemSel.price) || 0; (this.itemSel.addons || []).forEach(a => { if (this.itemAddons.indexOf(a.name) >= 0) t += Number(a.price) || 0; }); return t; },
-get itemTotal() { return this.itemUnit * this.itemQty; },
-addItemToCart() {
-const it = this.itemSel; if (!it) return false;
-const chosen = (it.addons || []).filter(a => this.itemAddons.indexOf(a.name) >= 0);
-const detail = chosen.length ? 'Complementos: ' + chosen.map(a => a.name + (Number(a.price) > 0 ? ' (+' + this.formatMoney(a.price) + ')' : '')).join(', ') : '';
-this.customCart.push({ name: it.name, detail: detail, price: this.itemUnit, qty: this.itemQty });
-this.itemSel = null; return true;
-},
-buyItem() { if (this.addItemToCart()) this.openCheckout(); },
-addItemAndContinue() { if (this.addItemToCart()) this.showNotification('Agregado al pedido'); },
 pickDishPhoto(ev) {
-const f = ev.target.files && ev.target.files[0];
-this.dishPhotoMsg = '';
-if (!f) return;
-if (f.type.indexOf('image/') !== 0) { this.dishPhotoMsg = 'Elige una imagen de tu galería'; return; }
-const rd = new FileReader();
-rd.onload = () => {
-const img = new Image();
-img.onload = () => {
-const k = Math.min(1, 420 / Math.max(img.width, img.height));
-const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-this.dishForm.image = c.toDataURL('image/jpeg', 0.6); this.dishPhotoUrl = '';
-};
-img.onerror = () => { this.dishPhotoMsg = 'No se pudo leer la imagen'; };
-img.src = rd.result;
-};
-rd.readAsDataURL(f);
-ev.target.value = '';
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  if (f.type.indexOf('image/') !== 0) { this.showNotification('Por favor selecciona una imagen válida'); return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      // Redimensionar para mantener liviana la base de datos (máximo 600px y compresión JPEG 0.7)
+      const maxDim = 600;
+      const k = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k);
+      c.height = Math.round(img.height * k);
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      this.dishForm.image = c.toDataURL('image/jpeg', 0.7);
+      this.showNotification('Foto cargada con éxito');
+    };
+    img.onerror = () => { this.showNotification('No se pudo procesar la imagen'); };
+    img.src = rd.result;
+  };
+  rd.readAsDataURL(f);
 },
 openDishModal() {
-this.dishPhotoUrl = ''; this.dishPhotoMsg = '';
 this.editingDishId = null;
-this.dishForm = { name: '', price: 0, image: '', desc: '', addons: [], recipe: [] };
+this.dishForm = { name: '', price: 0, image: '', desc: '', recipe: [] };
 this.addRecipeRow();
 this.showDishModal = true;
 },
 editDish(dish) {
 this.editingDishId = dish.id;
 this.dishForm = JSON.parse(JSON.stringify(dish));
-if (!this.dishForm.addons) this.dishForm.addons = [];
-this.dishPhotoMsg = '';
-this.dishPhotoUrl = (this.dishForm.image && this.dishForm.image.indexOf('data:') !== 0) ? this.dishForm.image : '';
 this.showDishModal = true;
 },
 addRecipeRow() { this.dishForm.recipe.push({ ingredientId: '', portion: '1' }); },
@@ -1364,7 +1365,6 @@ removeRecipeRow(index) { this.dishForm.recipe.splice(index, 1); },
 saveDish() {
 if (!this.dishForm.name.trim()) return;
 this.dishForm.recipe = this.dishForm.recipe.filter(r => r.ingredientId);
-this.dishForm.addons = (this.dishForm.addons || []).filter(a => String(a.name).trim()).map(a => ({ name: String(a.name).trim(), price: Number(a.price) || 0 }));
 if (this.editingDishId) {
 const index = this.dishes.findIndex(d => d.id === this.editingDishId);
 if (index !== -1) this.dishes[index] = { ...this.dishForm, id: this.editingDishId };
@@ -1373,7 +1373,7 @@ this.dishes.push({ ...this.dishForm, id: Date.now().toString() });
 }
 this.saveDishes();
 this.showDishModal = false;
-this.showNotification(this.role === 'admin' ? 'Plato guardado. Toca "Publicar menú" para que lo vean todos' : 'Plato guardado con éxito');
+this.showNotification('Plato guardado con éxito');
 },
 deleteDish(id) {
 this.dishes = this.dishes.filter(d => d.id !== id);
@@ -1474,7 +1474,7 @@ try {
 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
 const a = document.createElement('a');
 a.href = URL.createObjectURL(blob);
-a.download = `Reporte_SaborControl_${new Date().toISOString().slice(0,10)}.csv`;
+a.download = `Reporte_Golosa_${new Date().toISOString().slice(0,10)}.csv`;
 document.body.appendChild(a); a.click(); document.body.removeChild(a);
 } catch (e) { console.error(e); }
 },
@@ -1516,6 +1516,20 @@ window.FB = {
 };
 window.dispatchEvent(new Event("fb-ready"));
 </script>
-<script>if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
+<script>
+// Forzar actualización inmediata y limpiar cachés viejos
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for (let registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+if ('caches' in window) {
+  caches.keys().then(function(names) {
+    for (let name of names) caches.delete(name);
+  });
+}
+</script>
 </body>
 </html>
