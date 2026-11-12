@@ -45,6 +45,28 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div x-show="newOrderBanner && (role === 'seller' || role === 'admin')" x-cloak @click="activeTab = 'orders'; newOrderBanner = null" class="fixed top-2 left-2 right-2 max-w-md mx-auto z-50 bg-amber-400 text-slate-900 font-bold text-sm rounded-xl p-3 shadow-2xl cursor-pointer">🔔 <span x-text="newOrderBanner"></span> — toca para ver</div>
 
 <!-- MODAL CAMBIAR DIRECCIÓN CLIENTE -->
+<!-- COMPARTIR APK (REFERIDOS) -->
+<div x-show="showShare" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" @click.self="showShare = false">
+<div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl">
+<div class="flex justify-between items-center"><h3 class="font-bold text-slate-800 text-base">🇭🇳 Comparte Golosa</h3><button @click="showShare = false" class="text-slate-400 text-lg">✕</button></div>
+<p class="text-sm text-slate-700">Comparte la APK con un amigo. Cuando haga su <b>primera compra</b>, ¡te ganas un <b>desayuno gratis</b>! 🍳</p>
+<div class="bg-brand-50 border border-brand-200 rounded-xl p-3 text-center"><p class="text-xs text-slate-500">Tu código personal</p><p class="text-2xl font-black text-brand-700 tracking-wider" x-text="shareCode"></p><p class="text-[11px] text-slate-500">Tu amigo lo escribe al crear su cuenta</p></div>
+<button @click="shareApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md">📤 Compartir con un amigo</button>
+<button @click="copyShare()" class="w-full bg-slate-100 text-slate-700 font-bold py-2 rounded-xl text-sm">📋 Copiar mensaje</button>
+</div></div>
+
+<!-- OFERTAS DEL CLIENTE (CAMPANITA) -->
+<div x-show="showOffers" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" @click.self="showOffers = false">
+<div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[80vh] overflow-y-auto">
+<div class="flex justify-between items-center"><h3 class="font-bold text-slate-800 text-base">🔔 Mis ofertas</h3><button @click="showOffers = false" class="text-slate-400 text-lg">✕</button></div>
+<template x-if="offers.length === 0"><p class="text-center py-8 text-xs text-slate-400">Aún no tienes ofertas. ¡Comparte Golosa con tus amigos y gana desayunos gratis!</p></template>
+<template x-for="o in offers" :key="o.id">
+<div :class="offersNew.includes(o.id) ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'" class="border rounded-xl p-3 space-y-1">
+<p class="text-sm text-slate-800" x-text="o.text"></p>
+<p class="text-[10px] text-slate-400" x-text="formatDateTime(o.createdAt)"></p>
+</div></template>
+</div></div>
+
 <div x-show="showAddressModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
 <div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-3">
 <div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-slate-800 text-sm">📍 Tu dirección de entrega</h3><button @click="showAddressModal = false" class="text-slate-400 text-lg">✕</button></div>
@@ -219,6 +241,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <input type="text" x-model="custForm.name" placeholder="Tu nombre" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
 <input type="tel" inputmode="numeric" x-model="custForm.phone" placeholder="Tu número de celular" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
 <input type="password" x-model="custForm.pass" placeholder="Crea tu propia clave (mín. 4)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
+<input type="tel" inputmode="numeric" x-model="custForm.ref" placeholder="¿Te invitó un amigo? Escribe su código (opcional)" class="w-full text-base p-3 rounded-xl text-slate-800 focus:outline-none">
 <button @click="custCreate()" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl">Guardar y entrar</button>
 <p class="text-xs text-amber-200 text-center" x-text="authError"></p>
 </div></template>
@@ -248,7 +271,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </div>
 
 <!-- CLIENTE -->
-<div x-show="role === 'customer'" x-cloak class="flex-1 flex flex-col pb-20">
+<div x-show="role === 'customer'" x-cloak class="flex-1 flex flex-col pb-32">
 <!-- HEADER CLIENTE -->
 <div class="bg-gradient-to-r from-brand-800 via-brand-700 to-indigo-700 text-white p-4 sticky top-0 z-30 shadow-md">
 <!-- PORTADA / HERO COCINERA GOLOSA -->
@@ -266,7 +289,10 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
       </p>
     </div>
   </div>
-  <button @click="logout()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition shrink-0">Salir</button>
+  <div class="flex items-center gap-2 shrink-0">
+  <button @click="openOffers()" aria-label="Ofertas" class="relative bg-white/20 hover:bg-white/30 text-white w-9 h-9 rounded-xl flex items-center justify-center active:scale-95 transition"><span class="text-lg">🔔</span><span x-show="unreadOffers.length > 0" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full px-1.5" x-text="unreadOffers.length"></span></button>
+  <button @click="logout()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition">Salir</button>
+</div>
 </div>
 <!-- BARRA DE DIRECCIÓN PERMANENTE -->
 <div class="bg-black/20 rounded-xl p-2.5 flex items-center justify-between text-xs">
@@ -367,6 +393,9 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </template>
 </div>
 
+<!-- FRANJA COMPARTIR (BANDERA HONDURAS) -->
+<button @click="showShare = true" class="fixed left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl z-30 flex items-center justify-center gap-2 bg-sky-600 text-white text-xs font-bold py-2 px-3 shadow-lg active:scale-95 transition" style="bottom:calc(4.25rem + env(safe-area-inset-bottom,0px))"><span class="text-base">🇭🇳</span><span>Comparte la APK con un amigo y gana un desayuno gratis</span></button>
+
 <!-- BARRA DE NAVEGACIÓN INFERIOR (CLIENTE) -->
 <nav class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
 <button @click="custTab = 'menu'" :class="custTab === 'menu' ? 'text-brand-600 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1 px-3 rounded-lg text-xs transition"><span class="text-lg mb-0.5">🍔</span><span>Menú / Platos</span></button>
@@ -384,7 +413,8 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <p class="text-xs text-brand-100 flex items-center gap-1">Desayunos &amp; Comidas Rápidas <span class="inline-block w-2 h-2 rounded-full bg-emerald-400" title="Guardado local activo"></span></p>
 </div>
 </div>
-<div class="flex items-center space-x-2"><button @click="logout()" class="bg-white/20 text-white px-2 h-9 rounded-lg text-xs font-bold">Salir</button><button @click="openSearch()" aria-label="Buscar" class="bg-white/20 hover:bg-white/30 text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-md active:scale-95 transition"><i class="fa-solid fa-magnifying-glass text-base"></i></button>
+<div class="flex items-center space-x-2"><button @click="logout()" class="bg-white/20 text-white px-2 h-9 rounded-lg text-xs font-bold">Salir</button><button x-show="role === 'admin'" @click="activeTab = 'referrals'" aria-label="Referidos" class="relative bg-white/20 hover:bg-white/30 text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-md active:scale-95 transition"><span class="text-base">🎁</span><span x-show="refPending > 0" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full px-1.5" x-text="refPending"></span></button>
+<button @click="openSearch()" aria-label="Buscar" class="bg-white/20 hover:bg-white/30 text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-md active:scale-95 transition"><i class="fa-solid fa-magnifying-glass text-base"></i></button>
 <button @click="openQuickSaleModal()" class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center shadow-md active:scale-95 transition"><i class="fa-solid fa-bolt mr-1 text-sm"></i> Venta Rápida</button></div>
 </div>
 </header>
@@ -598,6 +628,26 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div class="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-300"><i class="fa-solid fa-utensils text-3xl mb-2"></i><p class="text-sm font-semibold text-slate-600">No hay platos registrados</p><p class="text-xs text-slate-400">Crea tus recetas para saber cuánto ganas en cada venta</p></div>
 </template>
 </div>
+</div>
+
+<!-- REFERIDOS (ADMIN) -->
+<div x-show="activeTab === 'referrals' && role === 'admin'" x-cloak class="space-y-4">
+<div><h2 class="font-bold text-slate-800 text-base">🎁 Referidos</h2><p class="text-xs text-slate-500">Quién invitó a quién y si ya hizo su primera compra</p></div>
+<div class="bg-sky-50 border border-sky-200 rounded-2xl p-3 space-y-1">
+<p class="text-xs font-bold text-sky-800">🔔 Avisos recientes</p>
+<template x-if="refEvents.length === 0"><p class="text-xs text-slate-400">Sin avisos todavía.</p></template>
+<template x-for="(e, i) in refEvents" :key="i"><p class="text-xs text-slate-700"><span x-text="e.text"></span> <span class="text-slate-400" x-text="'· ' + formatDateTime(e.t)"></span></p></template>
+</div>
+<template x-if="refList.length === 0"><p class="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-300">Aún no hay referidos.</p></template>
+<template x-for="r in refList" :key="r.friendPhone">
+<div class="bg-white border border-slate-200 rounded-2xl p-3 space-y-2 shadow-sm">
+<p class="text-sm text-slate-800"><b x-text="r.inviterName"></b> <span class="text-xs text-slate-500" x-text="'(' + r.inviterPhone + ')'"></span> invitó a <b x-text="r.friendName"></b> <span class="text-xs text-slate-500" x-text="'(' + r.friendPhone + ')'"></span></p>
+<p class="text-[11px] text-slate-400" x-text="'Se registró: ' + formatDateTime(r.createdAt)"></p>
+<div class="flex items-center justify-between gap-2">
+<span :class="r.firstOrder ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" class="text-[11px] font-bold px-2 py-1 rounded-full" x-text="r.firstOrder ? '✅ Ya hizo su 1ª compra' : '⏳ Aún no compra'"></span>
+<template x-if="r.rewardSent"><span class="text-[11px] font-bold text-slate-500">🎁 Oferta enviada</span></template>
+<template x-if="!r.rewardSent"><button @click="sendReward(r)" :disabled="!r.firstOrder" class="bg-emerald-600 disabled:opacity-40 text-white font-bold text-xs px-3 py-1.5 rounded-lg">🎁 Enviar desayuno gratis</button></template>
+</div></div></template>
 </div>
 
 <!-- PEDIDOS EN LINEA -->
@@ -884,6 +934,46 @@ function appData() {
 return {
 activeTab: 'orders',
 custTab: 'menu',
+showShare: false, showOffers: false, offers: [], offersSeen: [], offersNew: [], referrals: [],
+APK_URL: 'https://github.com/gerardomont3s645-cloud/saborcontrol/releases/download/V1/Golosa.apk',
+get shareCode() { return (this.cust && this.cust.phone) || ''; },
+get shareText() { return '🇭🇳 ¡Prueba Golosa, desayunos y comidas rápidas! Descarga la app aquí: ' + this.APK_URL + ' — Al crear tu cuenta escribe mi código ' + this.shareCode + ' y yo gano un desayuno gratis 🍳'; },
+async shareApp() {
+  try { if (navigator.share) { await navigator.share({ title: 'Golosa', text: this.shareText }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  window.open('https://wa.me/?text=' + encodeURIComponent(this.shareText), '_blank');
+},
+copyShare() { try { navigator.clipboard.writeText(this.shareText); this.showNotification('Mensaje copiado'); } catch (e) { this.showNotification('No se pudo copiar'); } },
+get unreadOffers() { return this.offers.filter(o => !this.offersSeen.includes(o.id)); },
+openOffers() {
+  this.offersNew = this.unreadOffers.map(o => o.id); this.showOffers = true;
+  this.offersSeen = this.offers.map(o => o.id);
+  try { localStorage.setItem('sabor_offers_seen_' + this.cust.phone, JSON.stringify(this.offersSeen)); } catch (e) {}
+},
+async registerReferral(refRaw) {
+  const ref = String(refRaw || '').replace(/\D/g, '');
+  if (!ref || ref.length < 8 || !this.cust || ref === this.cust.phone || !window.FB) return;
+  try { await window.FB.addReferral({ inviterPhone: ref, friendPhone: this.cust.phone, friendName: this.cust.name, createdAt: Date.now(), firstOrder: false, rewardSent: false }); } catch (e) {}
+},
+get refList() {
+  const names = {}; this.orders.forEach(o => { names[o.phone] = o.customerName; });
+  return this.referrals.slice().sort((a, b) => b.createdAt - a.createdAt).map(r => Object.assign({}, r, { inviterName: names[r.inviterPhone] || r.inviterPhone }));
+},
+get refPending() { return this.referrals.filter(r => r.firstOrder && !r.rewardSent).length; },
+get refEvents() {
+  const ev = [];
+  this.refList.forEach(r => {
+    ev.push({ t: r.createdAt, text: '👋 ' + r.friendName + ' se registró invitado por ' + r.inviterName });
+    if (r.firstOrder) ev.push({ t: r.firstOrderAt || r.createdAt, text: '🛒 ' + r.friendName + ' hizo su primera compra (invitado por ' + r.inviterName + ')' });
+  });
+  return ev.sort((a, b) => b.t - a.t).slice(0, 6);
+},
+async sendReward(r) {
+  try {
+    await window.FB.addOffer({ to: r.inviterPhone, text: '🎁 ¡Tienes un desayuno gratis por referirnos! Gracias por invitar a ' + r.friendName + '. Muestra este aviso en tu próximo pedido.', createdAt: Date.now() });
+    await window.FB.updateReferral(r.friendPhone, { rewardSent: true, rewardAt: Date.now() });
+    this.showNotification('Oferta enviada a ' + r.inviterName);
+  } catch (e) { this.showNotification('No se pudo enviar. Revisa Internet'); }
+},
 showAddressModal: false,
 tempAddress: '',
 openAddressModal() {
@@ -1014,7 +1104,7 @@ const go = () => this.fbInit();
 if (window.FB) go(); else window.addEventListener('fb-ready', go);
 },
 role: null, authView: 'home', authName: '', authPass: '', authError: '', sellerName: '',
-cust: null, custForm: { name: '', phone: '', pass: '' }, showCustPass: false,
+cust: null, custForm: { name: '', phone: '', pass: '', ref: '' }, showCustPass: false,
 menuItems: [], menuInfo: { address: '' }, cart: {}, orderNote: '', orderSent: null, orderMsg: '', myOrders: [], busy: false,
 orders: [], newOrderBanner: null, audioCtx: null, unsubs: [],
 WA: '50494149886',
@@ -1039,6 +1129,7 @@ if (String(f.pass).length < 4 || f.pass === '1234') { this.authError = 'Crea una
 this.cust = { name: f.name.trim(), phone: phone, pass: f.pass, address: (f.address || '').trim() };
 try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
 this.startCustomer();
+this.registerReferral(f.ref); f.ref = '';
 },
 resetPhone: '',
 showCheckout: false, payMethod: '', paidWith: '', proofData: '', proofName: '', checkoutMsg: '', showMyOrders: false,
@@ -1150,6 +1241,11 @@ this.startCustomer();
 startCustomer() {
 this.role = 'customer'; this.authError = '';
 if (window.FB) this.unsubs.push(window.FB.watchMyOrders(this.cust.phone, l => { this.myOrders = l; }));
+try { this.offersSeen = JSON.parse(localStorage.getItem('sabor_offers_seen_' + this.cust.phone) || '[]'); } catch (e) { this.offersSeen = []; }
+if (window.FB) this.unsubs.push(window.FB.watchOffers(this.cust.phone, (l, added) => {
+this.offers = l;
+if (added.length) { this.showNotification('🎁 ¡Tienes una oferta nueva!'); try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {} }
+}));
 },
 async sellerEnter() {
 if (!this.authName.trim()) { this.authError = 'Escribe tu nombre'; return; }
@@ -1166,6 +1262,13 @@ try { if ('Notification' in window && Notification.permission === 'default') Not
 if (window.FB) this.unsubs.push(window.FB.watchOrders((list, added) => {
 this.orders = list;
 added.filter(o => o.status === 'pending').forEach(o => this.notifyOrder(o));
+}));
+if (this.role === 'admin' && window.FB) this.unsubs.push(window.FB.watchReferrals((l, ch) => {
+this.referrals = l;
+ch.forEach(r => {
+if (r.type === 'added') { this.showNotification('👋 Nuevo referido: ' + r.friendName); this.playTone(); }
+else if (r.firstOrder && !r.rewardSent) { this.showNotification('🛒 ' + r.friendName + ' hizo su primera compra'); this.playTone(); }
+});
 }));
 },
 notifyOrder(o) {
@@ -1188,7 +1291,7 @@ o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.3); t += 0.3;
 },
 logout() {
 this.unsubs.forEach(u => { try { u(); } catch (e) {} }); this.unsubs = [];
-this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.cart = {}; this.orderSent = null; this.showCustPass = false;
+this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.offers = []; this.referrals = []; this.cart = {}; this.orderSent = null; this.showCustPass = false;
 },
 itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name).join(', '); },
 openItem(item) { this.itemSel = item; this.itemComps = []; this.showItem = true; },
@@ -1270,6 +1373,7 @@ return { counter, online, total: counter + online };
 async confirmOrder(o) {
 if (o.status !== 'pending') return;
 try { await window.FB.setOrderStatus(o.id, 'confirmed', this.sellerName); } catch (e) { this.showNotification('No se pudo confirmar. Revisa Internet'); return; }
+try { window.FB.markFirstOrder(o.phone).catch(() => {}); } catch (e) {}
 let cost = 0;
 (o.items || []).forEach(i => { const d = this.dishes.find(x => x.name === i.name); if (d) cost += this.calculateDishCost(d) * i.qty; });
 const units = (o.items || []).reduce((a, i) => a + i.qty, 0) || 1;
@@ -1563,6 +1667,18 @@ const err = e => console.error("Firestore:", e);
 const toList = s => s.docs.map(d => ({ id: d.id, ...d.data() }));
 window.FB = {
   addOrder: o => addDoc(collection(db, "orders"), o),
+  addReferral: async r => { const ref = doc(db, "referrals", r.friendPhone); const s = await getDoc(ref); if (!s.exists()) await setDoc(ref, r); },
+  updateReferral: (id, f) => updateDoc(doc(db, "referrals", id), f),
+  markFirstOrder: async phone => { const ref = doc(db, "referrals", phone); const s = await getDoc(ref); if (s.exists() && !s.data().firstOrder) await updateDoc(ref, { firstOrder: true, firstOrderAt: Date.now() }); },
+  watchReferrals: cb => { let first = true; return onSnapshot(collection(db, "referrals"), s => {
+    const ch = first ? [] : s.docChanges().map(c => ({ type: c.type, ...c.doc.data() }));
+    first = false; cb(toList(s), ch);
+  }, err); },
+  addOffer: o => addDoc(collection(db, "offers"), o),
+  watchOffers: (phone, cb) => { let first = true; return onSnapshot(query(collection(db, "offers"), where("to", "==", phone)), s => {
+    const added = first ? [] : s.docChanges().filter(c => c.type === "added").map(c => ({ id: c.doc.id, ...c.doc.data() }));
+    first = false; cb(toList(s).sort((a, b) => b.createdAt - a.createdAt), added);
+  }, err); },
   updateOrder: (id, f) => updateDoc(doc(db, "orders", id), f),
   addProof: async (data, name) => (await addDoc(collection(db, "proofs"), { data, name, createdAt: Date.now() })).id,
   getProof: async id => { const s = await getDoc(doc(db, "proofs", id)); return s.exists() ? s.data() : null; },
