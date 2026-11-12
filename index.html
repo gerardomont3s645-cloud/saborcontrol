@@ -38,6 +38,31 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#7c3aed">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+.home-font{font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.home-anim{background:linear-gradient(160deg,#6d28d9 0%,#5b21b6 35%,#4f46e5 70%,#7c3aed 100%);background-size:300% 300%;animation:gradShift 16s ease infinite;position:relative;overflow:hidden}
+.home-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.home-bg ~ *{position:relative;z-index:1}
+@keyframes gradShift{0%,100%{background-position:0% 0%}50%{background-position:100% 100%}}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes floatSil{0%,100%{transform:translate(0,0) rotate(-1.5deg)}50%{transform:translate(8px,-18px) rotate(1.5deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes rise{0%{transform:translateY(0) scale(.8);opacity:0}15%{opacity:.35}85%{opacity:.25}100%{transform:translateY(-95vh) scale(1.1);opacity:0}}
+@keyframes orbMove{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-26px)}}
+.sil{position:absolute;color:#2e1065;opacity:.42;animation:floatSil 9s ease-in-out infinite;will-change:transform}
+.sil.lt{color:#ddd6fe;opacity:.13}
+.orb{position:absolute;border-radius:9999px;filter:blur(38px);animation:orbMove 11s ease-in-out infinite}
+.rise{position:absolute;bottom:-40px;font-size:26px;animation:rise 15s linear infinite}
+.home-title{animation:fadeUp .8s .05s both}
+.home-chef{display:inline-block;font-size:72px;filter:drop-shadow(0 12px 14px rgba(15,10,40,.45));animation:floatY 3.2s ease-in-out infinite}
+.fl-btn{animation:fadeUp .7s var(--d,0s) both,floatY 4.2s calc(var(--d,0s) + .7s) ease-in-out infinite;box-shadow:0 16px 28px -10px rgba(15,10,40,.6),0 6px 10px -4px rgba(15,10,40,.35),inset 0 1px 0 rgba(255,255,255,.4);letter-spacing:.01em}
+.fl-btn:active{filter:brightness(.92)}
+.fl-soft{box-shadow:0 10px 20px -10px rgba(15,10,40,.45),inset 0 1px 0 rgba(255,255,255,.12)}
+@media (prefers-reduced-motion:reduce){.fl-btn,.sil,.orb,.rise,.home-anim,.home-chef,.home-title{animation:none!important}}
+</style>
 </head>
 <body class="h-full text-slate-800 flex flex-col max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white min-h-screen shadow-xl" x-data="appData()" x-init="initApp()">
 
@@ -206,16 +231,33 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </div>
 
 <!-- ACCESO -->
-<div x-show="!role" x-cloak class="flex-1 min-h-screen bg-gradient-to-b from-brand-700 to-indigo-600 text-white p-6 flex flex-col justify-center space-y-4">
-<div class="text-center space-y-1"><div class="text-6xl">👩‍🍳</div><h1 class="text-2xl font-extrabold">¡Golosa te da la bienvenida!</h1><p class="text-base font-bold text-white" x-text="cust && cust.name ? cust.name : 'Estimado cliente'"></p><p class="text-sm text-brand-100">Desayunos &amp; Comidas Rápidas</p></div>
+<div x-show="!role" x-cloak class="home-font home-anim flex-1 min-h-screen text-white p-6 flex flex-col justify-center space-y-4">
+<!-- FONDO ANIMADO: siluetas de vendedores trabajando -->
+<div class="home-bg" aria-hidden="true">
+<div class="orb" style="width:220px;height:220px;background:#a78bfa;opacity:.35;top:-60px;right:-60px"></div>
+<div class="orb" style="width:260px;height:260px;background:#6366f1;opacity:.35;bottom:-80px;left:-80px;animation-delay:-4s"></div>
+<!-- cocinera con olla -->
+<svg class="sil" style="width:46%;top:3%;left:-6%" viewBox="0 0 200 200" fill="currentColor"><path d="M84 46C72 32 86 18 98 24C104 12 122 18 117 30C130 34 121 48 116 46Z"/><circle cx="100" cy="58" r="13"/><path d="M76 150C76 96 84 74 100 72C116 74 124 96 124 150Z"/><path d="M118 92L156 112L150 122L112 104Z"/><path d="M140 120h46v30q0 10-10 10h-26q-10 0-10-10z"/><rect x="134" y="118" width="58" height="6" rx="3"/><rect x="10" y="156" width="180" height="9" rx="3"/><rect x="26" y="165" width="8" height="30"/><rect x="166" y="165" width="8" height="30"/></svg>
+<!-- vendedora en puesto con sombrilla -->
+<svg class="sil" style="width:44%;top:2%;right:-8%;animation-delay:-3s" viewBox="0 0 200 200" fill="currentColor"><path d="M14 74Q100 -8 186 74Z"/><rect x="97" y="72" width="6" height="84"/><circle cx="68" cy="104" r="11"/><path d="M50 156C50 122 56 116 68 116C80 116 86 122 86 156Z"/><rect x="24" y="148" width="152" height="9" rx="3"/><circle cx="112" cy="140" r="8"/><circle cx="130" cy="140" r="8"/><circle cx="148" cy="140" r="8"/><rect x="30" y="157" width="7" height="36"/><rect x="163" y="157" width="7" height="36"/></svg>
+<!-- repartidor con bolsas -->
+<svg class="sil lt" style="width:40%;bottom:2%;left:-4%;animation-delay:-5s" viewBox="0 0 200 200" fill="currentColor"><circle cx="100" cy="36" r="14"/><path d="M78 160C76 96 84 62 100 58C116 62 124 96 122 160Z"/><path d="M80 80L52 120L62 126L88 92Z"/><rect x="38" y="120" width="30" height="40" rx="5"/><path d="M120 80L148 120L138 126L112 92Z"/><rect x="132" y="120" width="30" height="40" rx="5"/><rect x="84" y="160" width="12" height="34"/><rect x="104" y="160" width="12" height="34"/></svg>
+<!-- cocinera volteando -->
+<svg class="sil" style="width:42%;bottom:3%;right:-6%;animation-delay:-7s;transform:scaleX(-1)" viewBox="0 0 200 200" fill="currentColor"><path d="M84 46C72 32 86 18 98 24C104 12 122 18 117 30C130 34 121 48 116 46Z"/><circle cx="100" cy="58" r="13"/><path d="M76 150C76 96 84 74 100 72C116 74 124 96 124 150Z"/><path d="M118 92L156 112L150 122L112 104Z"/><path d="M140 120h46v30q0 10-10 10h-26q-10 0-10-10z"/><rect x="10" y="156" width="180" height="9" rx="3"/></svg>
+<span class="rise" style="left:12%;animation-delay:0s">🍳</span>
+<span class="rise" style="left:34%;animation-delay:-5s">🫓</span>
+<span class="rise" style="left:58%;animation-delay:-9s">☕</span>
+<span class="rise" style="left:80%;animation-delay:-3s">🥞</span>
+</div>
+<div class="text-center space-y-1 home-title"><div class="home-chef">👩‍🍳</div><h1 class="text-[1.7rem] leading-tight font-extrabold tracking-tight" style="text-shadow:0 4px 14px rgba(15,10,40,.45)">¡Golosa te da la bienvenida!</h1><p class="text-base font-bold text-white" x-text="cust && cust.name ? cust.name : 'Estimado cliente'"></p><p class="text-sm text-brand-100">Desayunos &amp; Comidas Rápidas</p></div>
 <template x-if="authView === 'home'"><div class="space-y-3">
-<button @click="goAuth('custLogin')" class="w-full bg-white text-brand-700 font-bold py-3 rounded-xl shadow-md">🛒 Soy cliente</button>
-<button @click="goAuth('sellerLogin')" class="w-full bg-amber-400 text-slate-900 font-bold py-3 rounded-xl shadow-md">🧑‍🍳 Soy vendedora</button>
-<button @click="goAuth('adminLogin')" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl shadow-md">🔐 Administrador</button>
+<button @click="goAuth('custLogin')" style="--d:.15s" class="fl-btn w-full bg-white text-brand-700 font-bold py-3.5 rounded-2xl">🛒 Soy cliente</button>
+<button @click="goAuth('sellerLogin')" style="--d:.3s" class="fl-btn w-full bg-amber-400 text-slate-900 font-bold py-3.5 rounded-2xl">🧑‍🍳 Soy vendedora</button>
+<button @click="goAuth('adminLogin')" style="--d:.45s;background:rgba(15,10,40,.38);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)" class="fl-btn fl-soft w-full text-white/75 font-semibold py-2.5 rounded-2xl text-sm border border-white/15">🔐 Administrador</button>
   <div style="margin-top: 20px; display: flex; justify-content: center; align-items: center;">
   <a href="https://github.com/gerardomont3s645-cloud/saborcontrol/releases/download/V1/Golosa.apk" 
-     download="Golosa.apk"
-     style="display: inline-flex; align-items: center; text-decoration: none; cursor: pointer;">
+     download="Golosa.apk" class="fl-btn" 
+     style="--d:.6s; box-shadow:none; display: inline-flex; align-items: center; text-decoration: none; cursor: pointer;">
     <div style="width: 110px; height: 110px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #374151, #111827); border: 5px solid #9ca3af; box-shadow: 0 8px 20px rgba(0,0,0,0.45), inset 0 2px 8px rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6px; color: white; z-index: 2;">
       <span style="font-size: 22px; line-height: 1;">🍳</span>
       <span style="font-size: 11px; font-weight: bold; margin-top: 4px; line-height: 1.1;">Descargar<br>APK</span>
