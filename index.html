@@ -49,7 +49,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div x-show="showShare" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" @click.self="showShare = false">
 <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl">
 <div class="flex justify-between items-center"><h3 class="font-bold text-slate-800 text-base">🇭🇳 Comparte Golosa</h3><button @click="showShare = false" class="text-slate-400 text-lg">✕</button></div>
-<p class="text-sm text-slate-700">Comparte la APK con un amigo. Cuando haga su <b>primera compra</b>, ¡te ganas un <b>desayuno gratis</b>! 🍳</p>
+<p class="text-sm text-slate-700">Comparte la APK con un amigo. Cuando haga su <b>primera compra</b> (de Lps. 80 a 120), ¡participas en una <b>rifa de premios gratis</b>! 🎁</p>
 <div class="bg-brand-50 border border-brand-200 rounded-xl p-3 text-center"><p class="text-xs text-slate-500">Tu código personal</p><p class="text-2xl font-black text-brand-700 tracking-wider" x-text="shareCode"></p><p class="text-[11px] text-slate-500">Tu amigo lo escribe al crear su cuenta</p></div>
 <button @click="shareApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md">📤 Compartir con un amigo</button>
 <button @click="copyShare()" class="w-full bg-slate-100 text-slate-700 font-bold py-2 rounded-xl text-sm">📋 Copiar mensaje</button>
@@ -59,7 +59,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div x-show="showOffers" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" @click.self="showOffers = false">
 <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[80vh] overflow-y-auto">
 <div class="flex justify-between items-center"><h3 class="font-bold text-slate-800 text-base">🔔 Mis ofertas</h3><button @click="showOffers = false" class="text-slate-400 text-lg">✕</button></div>
-<template x-if="offers.length === 0"><p class="text-center py-8 text-xs text-slate-400">Aún no tienes ofertas. ¡Comparte Golosa con tus amigos y gana desayunos gratis!</p></template>
+<template x-if="offers.length === 0"><p class="text-center py-8 text-xs text-slate-400">Aún no tienes ofertas. ¡Comparte Golosa con tus amigos y participa por premios gratis!</p></template>
 <template x-for="o in offers" :key="o.id">
 <div :class="offersNew.includes(o.id) ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'" class="border rounded-xl p-3 space-y-1">
 <p class="text-sm text-slate-800" x-text="o.text"></p>
@@ -394,7 +394,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </div>
 
 <!-- FRANJA COMPARTIR (BANDERA HONDURAS) -->
-<button @click="showShare = true" class="fixed left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl z-30 flex items-center justify-center gap-2 bg-sky-600 text-white text-xs font-bold py-2 px-3 shadow-lg active:scale-95 transition" style="bottom:calc(4.25rem + env(safe-area-inset-bottom,0px))"><span class="text-base">🇭🇳</span><span>Comparte la APK con un amigo y gana un desayuno gratis</span></button>
+<button @click="showShare = true" class="fixed left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl z-30 flex items-center justify-center gap-2 bg-sky-600 text-white text-xs font-bold py-2 px-3 shadow-lg active:scale-95 transition" style="bottom:calc(4.25rem + env(safe-area-inset-bottom,0px))"><span class="text-base">🇭🇳</span><span>Comparte la APK con un amigo y participa por premios gratis</span></button>
 
 <!-- BARRA DE NAVEGACIÓN INFERIOR (CLIENTE) -->
 <nav class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
@@ -632,7 +632,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 
 <!-- REFERIDOS (ADMIN) -->
 <div x-show="activeTab === 'referrals' && role === 'admin'" x-cloak class="space-y-4">
-<div><h2 class="font-bold text-slate-800 text-base">🎁 Referidos</h2><p class="text-xs text-slate-500">Quién invitó a quién y si ya hizo su primera compra</p></div>
+<div><h2 class="font-bold text-slate-800 text-base">🎁 Referidos</h2><p class="text-xs text-slate-500">Quién invitó a quién. La rifa aplica si la 1ª compra es de Lps. 80 a 120</p></div>
 <div class="bg-sky-50 border border-sky-200 rounded-2xl p-3 space-y-1">
 <p class="text-xs font-bold text-sky-800">🔔 Avisos recientes</p>
 <template x-if="refEvents.length === 0"><p class="text-xs text-slate-400">Sin avisos todavía.</p></template>
@@ -644,9 +644,9 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <p class="text-sm text-slate-800"><b x-text="r.inviterName"></b> <span class="text-xs text-slate-500" x-text="'(' + r.inviterPhone + ')'"></span> invitó a <b x-text="r.friendName"></b> <span class="text-xs text-slate-500" x-text="'(' + r.friendPhone + ')'"></span></p>
 <p class="text-[11px] text-slate-400" x-text="'Se registró: ' + formatDateTime(r.createdAt)"></p>
 <div class="flex items-center justify-between gap-2">
-<span :class="r.firstOrder ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" class="text-[11px] font-bold px-2 py-1 rounded-full" x-text="r.firstOrder ? '✅ Ya hizo su 1ª compra' : '⏳ Aún no compra'"></span>
-<template x-if="r.rewardSent"><span class="text-[11px] font-bold text-slate-500">🎁 Oferta enviada</span></template>
-<template x-if="!r.rewardSent"><button @click="sendReward(r)" :disabled="!r.firstOrder" class="bg-emerald-600 disabled:opacity-40 text-white font-bold text-xs px-3 py-1.5 rounded-lg">🎁 Enviar desayuno gratis</button></template>
+<span :class="r.firstOrder ? (inRange(r) ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700') : 'bg-amber-100 text-amber-700'" class="text-[11px] font-bold px-2 py-1 rounded-full" x-text="r.firstOrder ? (inRange(r) ? '✅ 1ª compra Lps. ' + r.firstOrderTotal : '⚠️ 1ª compra Lps. ' + r.firstOrderTotal + ' (fuera de 80–120)') : '⏳ Aún no compra'"></span>
+<template x-if="r.rewardSent"><span class="text-[11px] font-bold text-slate-500" x-text="'🎁 ' + (r.prize || 'Premio enviado')"></span></template>
+<template x-if="!r.rewardSent"><button @click="drawPrize(r)" :disabled="!r.firstOrder || !inRange(r)" class="bg-emerald-600 disabled:opacity-40 text-white font-bold text-xs px-3 py-1.5 rounded-lg">🎲 Sortear premio</button></template>
 </div></div></template>
 </div>
 
@@ -937,7 +937,7 @@ custTab: 'menu',
 showShare: false, showOffers: false, offers: [], offersSeen: [], offersNew: [], referrals: [],
 APK_URL: 'https://github.com/gerardomont3s645-cloud/saborcontrol/releases/download/V1/Golosa.apk',
 get shareCode() { return (this.cust && this.cust.phone) || ''; },
-get shareText() { return '🇭🇳 ¡Prueba Golosa, desayunos y comidas rápidas! Descarga la app aquí: ' + this.APK_URL + ' — Al crear tu cuenta escribe mi código ' + this.shareCode + ' y yo gano un desayuno gratis 🍳'; },
+get shareText() { return '🇭🇳 ¡Prueba Golosa, desayunos y comidas rápidas! Descarga la app aquí: ' + this.APK_URL + ' — Al crear tu cuenta escribe mi código ' + this.shareCode + ' y yo participo en una rifa de premios gratis 🎁'; },
 async shareApp() {
   try { if (navigator.share) { await navigator.share({ title: 'Golosa', text: this.shareText }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   window.open('https://wa.me/?text=' + encodeURIComponent(this.shareText), '_blank');
@@ -958,7 +958,7 @@ get refList() {
   const names = {}; this.orders.forEach(o => { names[o.phone] = o.customerName; });
   return this.referrals.slice().sort((a, b) => b.createdAt - a.createdAt).map(r => Object.assign({}, r, { inviterName: names[r.inviterPhone] || r.inviterPhone }));
 },
-get refPending() { return this.referrals.filter(r => r.firstOrder && !r.rewardSent).length; },
+get refPending() { return this.referrals.filter(r => r.firstOrder && !r.rewardSent && this.inRange(r)).length; },
 get refEvents() {
   const ev = [];
   this.refList.forEach(r => {
@@ -967,12 +967,21 @@ get refEvents() {
   });
   return ev.sort((a, b) => b.t - a.t).slice(0, 6);
 },
-async sendReward(r) {
+PRIZES: [
+  { min: 80, max: 99, list: ['☕ Un café gratis', '🥣 Un osmil gratis', '🫓 Una baleada sencilla gratis'] },
+  { min: 100, max: 120, list: ['🥤 Un fresco gratis', '🥣 Un osmil gratis', '🫓 Una baleada gratis'] }
+],
+inRange(r) { const t = Number(r.firstOrderTotal); return t >= 80 && t <= 120; },
+prizeList(total) { const t = Number(total); const tier = this.PRIZES.find(p => t >= p.min && t <= p.max); return tier ? tier.list : []; },
+async drawPrize(r) {
+  const list = this.prizeList(r.firstOrderTotal);
+  if (!r.firstOrder || !list.length || r.rewardSent) return;
+  const prize = list[Math.floor(Math.random() * list.length)];
   try {
-    await window.FB.addOffer({ to: r.inviterPhone, text: '🎁 ¡Tienes un desayuno gratis por referirnos! Gracias por invitar a ' + r.friendName + '. Muestra este aviso en tu próximo pedido.', createdAt: Date.now() });
-    await window.FB.updateReferral(r.friendPhone, { rewardSent: true, rewardAt: Date.now() });
-    this.showNotification('Oferta enviada a ' + r.inviterName);
-  } catch (e) { this.showNotification('No se pudo enviar. Revisa Internet'); }
+    await window.FB.addOffer({ to: r.inviterPhone, text: '🎉 ¡Ganaste en la rifa por referirnos! Tu premio: ' + prize + '. Muestra este aviso en tu próximo pedido.', createdAt: Date.now() });
+    await window.FB.updateReferral(r.friendPhone, { rewardSent: true, prize: prize, rewardAt: Date.now() });
+    this.showNotification('🎲 Premio sorteado: ' + prize);
+  } catch (e) { this.showNotification('No se pudo sortear. Revisa Internet'); }
 },
 showAddressModal: false,
 tempAddress: '',
@@ -1267,7 +1276,7 @@ if (this.role === 'admin' && window.FB) this.unsubs.push(window.FB.watchReferral
 this.referrals = l;
 ch.forEach(r => {
 if (r.type === 'added') { this.showNotification('👋 Nuevo referido: ' + r.friendName); this.playTone(); }
-else if (r.firstOrder && !r.rewardSent) { this.showNotification('🛒 ' + r.friendName + ' hizo su primera compra'); this.playTone(); }
+else if (r.firstOrder && !r.rewardSent && this.inRange(r)) { this.showNotification('🛒 ' + r.friendName + ' hizo su primera compra'); this.playTone(); }
 });
 }));
 },
@@ -1373,7 +1382,7 @@ return { counter, online, total: counter + online };
 async confirmOrder(o) {
 if (o.status !== 'pending') return;
 try { await window.FB.setOrderStatus(o.id, 'confirmed', this.sellerName); } catch (e) { this.showNotification('No se pudo confirmar. Revisa Internet'); return; }
-try { window.FB.markFirstOrder(o.phone).catch(() => {}); } catch (e) {}
+try { window.FB.markFirstOrder(o.phone, o.total).catch(() => {}); } catch (e) {}
 let cost = 0;
 (o.items || []).forEach(i => { const d = this.dishes.find(x => x.name === i.name); if (d) cost += this.calculateDishCost(d) * i.qty; });
 const units = (o.items || []).reduce((a, i) => a + i.qty, 0) || 1;
@@ -1669,7 +1678,7 @@ window.FB = {
   addOrder: o => addDoc(collection(db, "orders"), o),
   addReferral: async r => { const ref = doc(db, "referrals", r.friendPhone); const s = await getDoc(ref); if (!s.exists()) await setDoc(ref, r); },
   updateReferral: (id, f) => updateDoc(doc(db, "referrals", id), f),
-  markFirstOrder: async phone => { const ref = doc(db, "referrals", phone); const s = await getDoc(ref); if (s.exists() && !s.data().firstOrder) await updateDoc(ref, { firstOrder: true, firstOrderAt: Date.now() }); },
+  markFirstOrder: async (phone, total) => { const ref = doc(db, "referrals", phone); const s = await getDoc(ref); if (s.exists() && !s.data().firstOrder) await updateDoc(ref, { firstOrder: true, firstOrderAt: Date.now(), firstOrderTotal: Number(total) || 0 }); },
   watchReferrals: cb => { let first = true; return onSnapshot(collection(db, "referrals"), s => {
     const ch = first ? [] : s.docChanges().map(c => ({ type: c.type, ...c.doc.data() }));
     first = false; cb(toList(s), ch);
@@ -1709,4 +1718,4 @@ if ('caches' in window) {
 }
 </script>
 </body>
-  </html>
+</html>
