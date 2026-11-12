@@ -49,7 +49,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div x-show="showShare" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" @click.self="showShare = false">
 <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl">
 <div class="flex justify-between items-center"><h3 class="font-bold text-slate-800 text-base">🇭🇳 Comparte Golosa</h3><button @click="showShare = false" class="text-slate-400 text-lg">✕</button></div>
-<p class="text-sm text-slate-700">Comparte la APK con un amigo. Cuando haga su <b>primera compra</b> (de Lps. 80 a 120), ¡participas en una <b>rifa de premios gratis</b>! 🎁</p>
+<p class="text-sm text-slate-700">Comparte la APK con un amigo. Cuando haga su <b>primera compra</b>, ¡te ganas un <b>desayuno gratis</b>! 🍳</p>
 <div class="bg-brand-50 border border-brand-200 rounded-xl p-3 text-center"><p class="text-xs text-slate-500">Tu código personal</p><p class="text-2xl font-black text-brand-700 tracking-wider" x-text="shareCode"></p><p class="text-[11px] text-slate-500">Tu amigo lo escribe al crear su cuenta</p></div>
 <button @click="shareApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md">📤 Compartir con un amigo</button>
 <button @click="copyShare()" class="w-full bg-slate-100 text-slate-700 font-bold py-2 rounded-xl text-sm">📋 Copiar mensaje</button>
@@ -59,7 +59,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <div x-show="showOffers" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" @click.self="showOffers = false">
 <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[80vh] overflow-y-auto">
 <div class="flex justify-between items-center"><h3 class="font-bold text-slate-800 text-base">🔔 Mis ofertas</h3><button @click="showOffers = false" class="text-slate-400 text-lg">✕</button></div>
-<template x-if="offers.length === 0"><p class="text-center py-8 text-xs text-slate-400">Aún no tienes ofertas. ¡Comparte Golosa con tus amigos y participa por premios gratis!</p></template>
+<template x-if="offers.length === 0"><p class="text-center py-8 text-xs text-slate-400">Aún no tienes ofertas. ¡Comparte Golosa con tus amigos y gana desayunos gratis!</p></template>
 <template x-for="o in offers" :key="o.id">
 <div :class="offersNew.includes(o.id) ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'" class="border rounded-xl p-3 space-y-1">
 <p class="text-sm text-slate-800" x-text="o.text"></p>
@@ -394,7 +394,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 </div>
 
 <!-- FRANJA COMPARTIR (BANDERA HONDURAS) -->
-<button @click="showShare = true" class="fixed left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl z-30 flex items-center justify-center gap-2 bg-sky-600 text-white text-xs font-bold py-2 px-3 shadow-lg active:scale-95 transition" style="bottom:calc(4.25rem + env(safe-area-inset-bottom,0px))"><span class="text-base">🇭🇳</span><span>Comparte la APK con un amigo y participa por premios gratis</span></button>
+<button @click="showShare = true" class="fixed left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl z-30 flex items-center justify-center gap-2 bg-sky-600 text-white text-xs font-bold py-2 px-3 shadow-lg active:scale-95 transition" style="bottom:calc(4.25rem + env(safe-area-inset-bottom,0px))"><span class="text-base">🇭🇳</span><span>Comparte la APK con un amigo y gana un desayuno gratis</span></button>
 
 <!-- BARRA DE NAVEGACIÓN INFERIOR (CLIENTE) -->
 <nav class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto sm:max-w-xl md:max-w-4xl bg-white border-t border-slate-200 z-30 flex justify-around p-2 shadow-lg">
@@ -632,7 +632,7 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 
 <!-- REFERIDOS (ADMIN) -->
 <div x-show="activeTab === 'referrals' && role === 'admin'" x-cloak class="space-y-4">
-<div><h2 class="font-bold text-slate-800 text-base">🎁 Referidos</h2><p class="text-xs text-slate-500">Quién invitó a quién. La rifa aplica si la 1ª compra es de Lps. 80 a 120</p></div>
+<div><h2 class="font-bold text-slate-800 text-base">🎁 Referidos</h2><p class="text-xs text-slate-500">Quién invitó a quién y si ya hizo su primera compra</p></div>
 <div class="bg-sky-50 border border-sky-200 rounded-2xl p-3 space-y-1">
 <p class="text-xs font-bold text-sky-800">🔔 Avisos recientes</p>
 <template x-if="refEvents.length === 0"><p class="text-xs text-slate-400">Sin avisos todavía.</p></template>
@@ -644,9 +644,9 @@ nav.bottom-nav{padding-bottom:calc(.5rem + env(safe-area-inset-bottom,0px))}
 <p class="text-sm text-slate-800"><b x-text="r.inviterName"></b> <span class="text-xs text-slate-500" x-text="'(' + r.inviterPhone + ')'"></span> invitó a <b x-text="r.friendName"></b> <span class="text-xs text-slate-500" x-text="'(' + r.friendPhone + ')'"></span></p>
 <p class="text-[11px] text-slate-400" x-text="'Se registró: ' + formatDateTime(r.createdAt)"></p>
 <div class="flex items-center justify-between gap-2">
-<span :class="r.firstOrder ? (inRange(r) ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700') : 'bg-amber-100 text-amber-700'" class="text-[11px] font-bold px-2 py-1 rounded-full" x-text="r.firstOrder ? (inRange(r) ? '✅ 1ª compra Lps. ' + r.firstOrderTotal : '⚠️ 1ª compra Lps. ' + r.firstOrderTotal + ' (fuera de 80–120)') : '⏳ Aún no compra'"></span>
-<template x-if="r.rewardSent"><span class="text-[11px] font-bold text-slate-500" x-text="'🎁 ' + (r.prize || 'Premio enviado')"></span></template>
-<template x-if="!r.rewardSent"><button @click="drawPrize(r)" :disabled="!r.firstOrder || !inRange(r)" class="bg-emerald-600 disabled:opacity-40 text-white font-bold text-xs px-3 py-1.5 rounded-lg">🎲 Sortear premio</button></template>
+<span :class="r.firstOrder ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" class="text-[11px] font-bold px-2 py-1 rounded-full" x-text="r.firstOrder ? '✅ Ya hizo su 1ª compra' : '⏳ Aún no compra'"></span>
+<template x-if="r.rewardSent"><span class="text-[11px] font-bold text-slate-500">🎁 Oferta enviada</span></template>
+<template x-if="!r.rewardSent"><button @click="sendReward(r)" :disabled="!r.firstOrder" class="bg-emerald-600 disabled:opacity-40 text-white font-bold text-xs px-3 py-1.5 rounded-lg">🎁 Enviar desayuno gratis</button></template>
 </div></div></template>
 </div>
 
@@ -937,7 +937,7 @@ custTab: 'menu',
 showShare: false, showOffers: false, offers: [], offersSeen: [], offersNew: [], referrals: [],
 APK_URL: 'https://github.com/gerardomont3s645-cloud/saborcontrol/releases/download/V1/Golosa.apk',
 get shareCode() { return (this.cust && this.cust.phone) || ''; },
-get shareText() { return '🇭🇳 ¡Prueba Golosa, desayunos y comidas rápidas! Descarga la app aquí: ' + this.APK_URL + ' — Al crear tu cuenta escribe mi código ' + this.shareCode + ' y yo participo en una rifa de premios gratis 🎁'; },
+get shareText() { return '🇭🇳 ¡Prueba Golosa, desayunos y comidas rápidas! Descarga la app aquí: ' + this.APK_URL + ' — Al crear tu cuenta escribe mi código ' + this.shareCode + ' y yo gano un desayuno gratis 🍳'; },
 async shareApp() {
   try { if (navigator.share) { await navigator.share({ title: 'Golosa', text: this.shareText }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   window.open('https://wa.me/?text=' + encodeURIComponent(this.shareText), '_blank');
@@ -958,7 +958,7 @@ get refList() {
   const names = {}; this.orders.forEach(o => { names[o.phone] = o.customerName; });
   return this.referrals.slice().sort((a, b) => b.createdAt - a.createdAt).map(r => Object.assign({}, r, { inviterName: names[r.inviterPhone] || r.inviterPhone }));
 },
-get refPending() { return this.referrals.filter(r => r.firstOrder && !r.rewardSent && this.inRange(r)).length; },
+get refPending() { return this.referrals.filter(r => r.firstOrder && !r.rewardSent).length; },
 get refEvents() {
   const ev = [];
   this.refList.forEach(r => {
@@ -967,21 +967,12 @@ get refEvents() {
   });
   return ev.sort((a, b) => b.t - a.t).slice(0, 6);
 },
-PRIZES: [
-  { min: 80, max: 99, list: ['☕ Un café gratis', '🥣 Un osmil gratis', '🫓 Una baleada sencilla gratis'] },
-  { min: 100, max: 120, list: ['🥤 Un fresco gratis', '🥣 Un osmil gratis', '🫓 Una baleada gratis'] }
-],
-inRange(r) { const t = Number(r.firstOrderTotal); return t >= 80 && t <= 120; },
-prizeList(total) { const t = Number(total); const tier = this.PRIZES.find(p => t >= p.min && t <= p.max); return tier ? tier.list : []; },
-async drawPrize(r) {
-  const list = this.prizeList(r.firstOrderTotal);
-  if (!r.firstOrder || !list.length || r.rewardSent) return;
-  const prize = list[Math.floor(Math.random() * list.length)];
+async sendReward(r) {
   try {
-    await window.FB.addOffer({ to: r.inviterPhone, text: '🎉 ¡Ganaste en la rifa por referirnos! Tu premio: ' + prize + '. Muestra este aviso en tu próximo pedido.', createdAt: Date.now() });
-    await window.FB.updateReferral(r.friendPhone, { rewardSent: true, prize: prize, rewardAt: Date.now() });
-    this.showNotification('🎲 Premio sorteado: ' + prize);
-  } catch (e) { this.showNotification('No se pudo sortear. Revisa Internet'); }
+    await window.FB.addOffer({ to: r.inviterPhone, text: '🎁 ¡Tienes un desayuno gratis por referirnos! Gracias por invitar a ' + r.friendName + '. Muestra este aviso en tu próximo pedido.', createdAt: Date.now() });
+    await window.FB.updateReferral(r.friendPhone, { rewardSent: true, rewardAt: Date.now() });
+    this.showNotification('Oferta enviada a ' + r.inviterName);
+  } catch (e) { this.showNotification('No se pudo enviar. Revisa Internet'); }
 },
 showAddressModal: false,
 tempAddress: '',
@@ -1150,4 +1141,572 @@ try { await window.FB.updateOrder(o.id, { paid: true, paidAt: Date.now() }); thi
 },
 async viewProof(o) {
 this.proofView = { loading: true, err: '', data: '', name: '' }; this.showProof = true;
-if (!o.proofId) { this.proofView = 
+if (!o.proofId) { this.proofView = { loading: false, err: 'Este pedido no tiene comprobante', data: '', name: '' }; return; }
+try {
+const p = await window.FB.getProof(o.proofId);
+this.proofView = p ? { loading: false, err: '', data: p.data, name: p.name } : { loading: false, err: 'No se encontró el comprobante', data: '', name: '' };
+} catch (e) { this.proofView = { loading: false, err: 'No se pudo cargar. Revisa Internet', data: '', name: '' }; }
+},
+async updateEta(o) {
+const m = parseInt(this.etaInputs[o.id] !== undefined ? this.etaInputs[o.id] : (o.prepMinutes || 15));
+if (!m || m < 1 || m > 180) { this.showNotification('Escribe minutos entre 1 y 180'); return; }
+try { await window.FB.updateOrder(o.id, { prepMinutes: m, etaAt: Date.now() + m * 60000 }); this.showNotification('Tiempo actualizado: ' + m + ' min'); } catch (e) { this.showNotification('No se pudo actualizar. Revisa Internet'); }
+},
+async markDelivered(o) {
+try { await window.FB.updateOrder(o.id, { status: 'delivered', deliveredAt: Date.now() }); this.showNotification('Pedido entregado'); } catch (e) { this.showNotification('No se pudo marcar. Revisa Internet'); }
+},
+build: { price: 60, options: [] }, menuBuild: { price: 60, options: [] }, newOpt: { name: '', cat: 'Proteína' },
+customCart: [], showItem: false, itemSel: null, itemComps: [], showBuild: false, buildSel: {}, buildMsg: '', showThanks: false, nowTs: Date.now(), timerId: null,
+loadBuild() { try { const b = localStorage.getItem('sabor_build'); if (b) this.build = JSON.parse(b); } catch (e) {} },
+saveBuild() { try { localStorage.setItem('sabor_build', JSON.stringify(this.build)); } catch (e) {} },
+addOpt() {
+const n = this.newOpt.name.trim();
+if (!n || this.build.options.some(o => o.name === n)) return;
+this.build.options.push({ name: n, cat: this.newOpt.cat });
+this.newOpt.name = ''; this.saveBuild();
+},
+removeOpt(i) { this.build.options.splice(i, 1); this.saveBuild(); },
+BUILD_EGGS: [{ name: 'Huevo picado', extra: 0 }, { name: 'Huevo en torta', extra: 0 }, { name: 'Huevo con tomate y cebolla', extra: 0 }, { name: 'Huevo cocido', extra: 0 }, { name: 'Huevo picado con chorizo', extra: 15 }],
+BUILD_COMPS: ['Frijoles fritos', 'Frijoles parados', 'Frijoles salteados', 'Plátano maduro', 'Mantequilla', 'Queso', 'Quesillo', 'Aguacate'],
+BUILD_SIDES: ['Tortillas de maíz (2 uds.)', 'Pan blanco'],
+buildEgg: '', buildComps: [], buildSide: '',
+openBuild() { this.buildEgg = ''; this.buildComps = []; this.buildSide = ''; this.buildMsg = ''; this.showBuild = true; },
+toggleComp(c) {
+const i = this.buildComps.indexOf(c);
+if (i >= 0) { this.buildComps.splice(i, 1); this.buildMsg = ''; }
+else if (this.buildComps.length >= 3) { this.buildMsg = 'Máximo 3 complementos'; }
+else { this.buildComps.push(c); this.buildMsg = ''; }
+},
+get buildBase() { return Number(this.menuBuild && this.menuBuild.price) || 60; },
+get buildPrice() { const e = this.BUILD_EGGS.find(x => x.name === this.buildEgg); return this.buildBase + (e ? e.extra : 0); },
+get buildValid() { return !!this.buildEgg && this.buildComps.length >= 1 && this.buildComps.length <= 3 && !!this.buildSide; },
+get buildGroups() {
+const order = [], map = {};
+(this.menuBuild.options || []).forEach(o => { if (!map[o.cat]) { map[o.cat] = []; order.push(o.cat); } map[o.cat].push(o); });
+return order.map(c => ({ cat: c, items: map[c] }));
+},
+addBuild() {
+if (!this.buildValid) { this.buildMsg = 'Elige 1 huevo, de 1 a 3 complementos y 1 acompañamiento'; return; }
+this.customCart.push({ name: 'Desayuno a tu gusto: ' + this.buildEgg + ' · ' + this.buildComps.join(', ') + ' · ' + this.buildSide, price: this.buildPrice, qty: 1 });
+this.showBuild = false;
+},
+startThanks() {
+this.showThanks = true; this.nowTs = Date.now();
+if (this.timerId) clearInterval(this.timerId);
+this.timerId = setInterval(() => { this.nowTs = Date.now(); }, 1000);
+},
+get currentOrder() { if (!this.orderSent) return null; return this.myOrders.find(x => x.createdAt === this.orderSent.createdAt) || this.orderSent; },
+get remainingSecs() { const o = this.currentOrder; if (!o) return 0; return Math.max(0, Math.ceil(((o.etaAt || (o.createdAt + 900000)) - this.nowTs) / 1000)); },
+get etaMinutes() { return Math.ceil(this.remainingSecs / 60); },
+get timerText() { const s = this.remainingSecs; return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); },
+get timerMsg() { return this.remainingSecs > 0 ? 'Tiempo estimado de entrega' : 'Tu desayuno ya debe estar listo'; },
+get orderStatus() { const o = this.currentOrder; return o ? o.status : 'pending'; },
+get prepPct() { const o = this.currentOrder; const tot = ((o && o.prepMinutes) || 15) * 60; return Math.min(100, Math.max(0, 100 - this.remainingSecs / tot * 100)); },
+get webauthnOk() { return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext); },
+b64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); },
+unb64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); },
+async enableBio() {
+try {
+const cred = await navigator.credentials.create({ publicKey: {
+challenge: crypto.getRandomValues(new Uint8Array(32)),
+rp: { name: 'Golosa' },
+user: { id: new TextEncoder().encode(this.cust.phone), name: this.cust.phone, displayName: this.cust.name },
+pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+timeout: 60000 } });
+this.cust.credId = this.b64(cred.rawId);
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.showNotification('Huella / patrón activado');
+} catch (e) { this.showNotification('No se pudo activar. El celular debe tener huella o patrón configurado'); }
+},
+async bioEnter() {
+try {
+await navigator.credentials.get({ publicKey: {
+challenge: crypto.getRandomValues(new Uint8Array(32)),
+allowCredentials: [{ type: 'public-key', id: this.unb64(this.cust.credId) }],
+userVerification: 'required', timeout: 60000 } });
+this.startCustomer();
+} catch (e) { this.authError = 'No se pudo verificar. Usa tu clave.'; }
+},
+resetPass() {
+const ph = String(this.resetPhone).replace(/\D/g, '');
+if (!this.cust || ph !== this.cust.phone) { this.authError = 'Ese celular no coincide con el de tu cuenta'; return; }
+const p = String(this.custForm.pass);
+if (p.length < 4 || p === '1234') { this.authError = 'Crea una clave de 4 o más caracteres (distinta de 1234)'; return; }
+this.cust.pass = p;
+try { localStorage.setItem('sabor_customer', JSON.stringify(this.cust)); } catch (e) {}
+this.custForm.pass = '';
+this.startCustomer();
+},
+startCustomer() {
+this.role = 'customer'; this.authError = '';
+if (window.FB) this.unsubs.push(window.FB.watchMyOrders(this.cust.phone, l => { this.myOrders = l; }));
+try { this.offersSeen = JSON.parse(localStorage.getItem('sabor_offers_seen_' + this.cust.phone) || '[]'); } catch (e) { this.offersSeen = []; }
+if (window.FB) this.unsubs.push(window.FB.watchOffers(this.cust.phone, (l, added) => {
+this.offers = l;
+if (added.length) { this.showNotification('🎁 ¡Tienes una oferta nueva!'); try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {} }
+}));
+},
+async sellerEnter() {
+if (!this.authName.trim()) { this.authError = 'Escribe tu nombre'; return; }
+if (await this.sha(this.authPass) !== this.SELLER_HASH) { this.authError = 'Clave incorrecta'; return; }
+this.sellerName = this.authName.trim(); this.role = 'seller'; this.activeTab = 'orders'; this.authError = ''; this.startStaff();
+},
+async adminEnter() {
+if (await this.sha(this.authPass) !== this.ADMIN_HASH) { this.authError = 'Clave incorrecta'; return; }
+this.sellerName = 'Admin'; this.role = 'admin'; this.activeTab = 'dashboard'; this.authError = ''; this.startStaff();
+},
+startStaff() {
+try { this.audioCtx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)(); this.audioCtx.resume(); } catch (e) {}
+try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+if (window.FB) this.unsubs.push(window.FB.watchOrders((list, added) => {
+this.orders = list;
+added.filter(o => o.status === 'pending').forEach(o => this.notifyOrder(o));
+}));
+if (this.role === 'admin' && window.FB) this.unsubs.push(window.FB.watchReferrals((l, ch) => {
+this.referrals = l;
+ch.forEach(r => {
+if (r.type === 'added') { this.showNotification('👋 Nuevo referido: ' + r.friendName); this.playTone(); }
+else if (r.firstOrder && !r.rewardSent) { this.showNotification('🛒 ' + r.friendName + ' hizo su primera compra'); this.playTone(); }
+});
+}));
+},
+notifyOrder(o) {
+this.newOrderBanner = 'Nuevo pedido de ' + o.customerName + ' (' + this.formatMoney(o.total) + ')';
+this.playTone();
+try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {}
+try { if ('Notification' in window && Notification.permission === 'granted') new Notification('Nuevo pedido', { body: o.customerName + ': ' + this.itemsText(o) }); } catch (e) {}
+},
+playTone() {
+try {
+const ctx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)(); this.audioCtx = ctx;
+const notes = [659, 784, 988, 784, 988, 1319]; let t = ctx.currentTime;
+for (let r = 0; r < 2; r++) notes.forEach(f => {
+const o = ctx.createOscillator(), g = ctx.createGain();
+o.type = 'sine'; o.frequency.value = f;
+g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.3); t += 0.3;
+});
+} catch (e) {}
+},
+logout() {
+this.unsubs.forEach(u => { try { u(); } catch (e) {} }); this.unsubs = [];
+this.role = null; this.authView = 'home'; this.authPass = ''; this.authName = ''; this.orders = []; this.myOrders = []; this.offers = []; this.referrals = []; this.cart = {}; this.orderSent = null; this.showCustPass = false;
+},
+itemsText(o) { return (o.items || []).map(i => i.qty + ' x ' + i.name).join(', '); },
+openItem(item) { this.itemSel = item; this.itemComps = []; this.showItem = true; },
+toggleComp(i) { const k = this.itemComps.indexOf(i); if (k >= 0) this.itemComps.splice(k, 1); else this.itemComps.push(i); },
+get itemPrice() { const it = this.itemSel; if (!it) return 0; return (Number(it.price) || 0) + (it.comps || []).reduce((a, c, i) => a + (this.itemComps.includes(i) ? (Number(c.price) || 0) : 0), 0); },
+addItem(buy) {
+const it = this.itemSel; if (!it) return;
+if (this.itemComps.length === 0) { this.changeQty(it, 1); }
+else { const names = this.itemComps.slice().sort((a, b) => a - b).map(i => it.comps[i].name); this.customCart.push({ name: it.name + ' + ' + names.join(', '), price: this.itemPrice, qty: 1 }); }
+this.showItem = false;
+if (buy) this.openCheckout(); else this.showNotification('Agregado al pedido. ¡Sigue comprando!');
+},
+changeQty(item, d) { const q = Math.max(0, (this.cart[item.name] || 0) + d); this.cart = Object.assign({}, this.cart, { [item.name]: q }); },
+get visibleMenu() { return (this.menuItems && this.menuItems.length > 0) ? this.menuItems : this.dishes; },
+get cartItems() { return this.visibleMenu.filter(i => (this.cart[i.name] || 0) > 0).map(i => ({ name: i.name, price: i.price, qty: this.cart[i.name] })).concat(this.customCart.map(c => ({ name: c.name, price: c.price, qty: c.qty }))); },
+get cartTotal() { return this.cartItems.reduce((a, i) => a + i.price * i.qty, 0); },
+openCheckout() {
+this.orderMsg = '';
+if (this.cartItems.length === 0) { this.orderMsg = 'Agrega al menos un plato o arma tu desayuno'; return; }
+this.payMethod = ''; this.paidWith = ''; this.proofData = ''; this.proofName = ''; this.checkoutMsg = ''; this.showCheckout = true;
+},
+get changeDue() { return (Number(this.paidWith) || 0) - this.cartTotal; },
+get checkoutValid() {
+if (this.payMethod === 'cash') return String(this.paidWith) !== '' && Number(this.paidWith) >= this.cartTotal && this.cartTotal > 0;
+if (this.payMethod === 'transfer') return !!this.proofData;
+return false;
+},
+pickProof(ev) {
+const f = ev.target.files && ev.target.files[0];
+this.checkoutMsg = ''; this.proofData = ''; this.proofName = '';
+if (!f) return;
+const rd = new FileReader();
+if (f.type === 'application/pdf') {
+if (f.size > 600000) { this.checkoutMsg = 'El PDF pesa mucho. Sube una foto del comprobante.'; return; }
+rd.onload = () => { this.proofData = rd.result; this.proofName = f.name; };
+rd.readAsDataURL(f); return;
+}
+if (f.type.indexOf('image/') !== 0) { this.checkoutMsg = 'Sube una imagen o un PDF'; return; }
+rd.onload = () => {
+const img = new Image();
+img.onload = () => {
+const k = Math.min(1, 1000 / Math.max(img.width, img.height));
+const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+this.proofData = c.toDataURL('image/jpeg', 0.65); this.proofName = f.name;
+};
+img.onerror = () => { this.checkoutMsg = 'No se pudo leer la imagen'; };
+img.src = rd.result;
+};
+rd.readAsDataURL(f);
+},
+async sendOrder() {
+if (!this.checkoutValid) return;
+this.busy = true; this.checkoutMsg = '';
+const now = Date.now();
+const order = { customerName: this.cust.name, phone: this.cust.phone, address: (this.cust && this.cust.address) || '', items: this.cartItems, note: this.orderNote.trim(), total: this.cartTotal, status: 'pending', createdAt: now, payMethod: this.payMethod, paid: false, prepMinutes: 15, etaAt: now + 900000 };
+if (this.payMethod === 'cash') { order.paidWith = Number(this.paidWith); order.change = Number(this.paidWith) - this.cartTotal; }
+try {
+if (this.payMethod === 'transfer') { order.proofId = await window.FB.addProof(this.proofData, this.proofName); }
+await window.FB.addOrder(order);
+this.orderSent = order; this.cart = {}; this.customCart = []; this.orderNote = ''; this.showCheckout = false; this.custTab = 'status'; this.startThanks();
+} catch (e) { this.checkoutMsg = 'No se pudo enviar. Revisa tu Internet e intenta de nuevo.'; }
+this.busy = false;
+},
+waLink(o) {
+const lines = ['Hola, quiero hacer un pedido:'].concat((o.items || []).map(i => '- ' + i.qty + ' x ' + i.name));
+if (o.note) lines.push('Desayuno: ' + o.note);
+lines.push('Total: Lps. ' + Number(o.total).toFixed(2), 'Nombre: ' + o.customerName, 'Celular: ' + o.phone);
+return 'https://wa.me/' + this.WA + '?text=' + encodeURIComponent(lines.join('\n'));
+},
+get pendingOrders() { return this.orders.filter(o => o.status === 'pending').sort((a, b) => a.createdAt - b.createdAt); },
+get confirmedToday() { const t = new Date().toDateString(); return this.orders.filter(o => (o.status === 'confirmed' || o.status === 'delivered') && new Date(o.confirmedAt || o.createdAt).toDateString() === t); },
+get liquidation() {
+const t = new Date().toDateString();
+const counter = this.history.filter(h => h.type === 'sale' && !String(h.description).startsWith('Pedido en línea') && new Date(h.date).toDateString() === t).reduce((a, h) => a + h.amount, 0);
+const online = this.confirmedToday.reduce((a, o) => a + o.total, 0);
+return { counter, online, total: counter + online };
+},
+async confirmOrder(o) {
+if (o.status !== 'pending') return;
+try { await window.FB.setOrderStatus(o.id, 'confirmed', this.sellerName); } catch (e) { this.showNotification('No se pudo confirmar. Revisa Internet'); return; }
+try { window.FB.markFirstOrder(o.phone).catch(() => {}); } catch (e) {}
+let cost = 0;
+(o.items || []).forEach(i => { const d = this.dishes.find(x => x.name === i.name); if (d) cost += this.calculateDishCost(d) * i.qty; });
+const units = (o.items || []).reduce((a, i) => a + i.qty, 0) || 1;
+this.history.unshift({ id: Date.now().toString(), type: 'sale', description: 'Pedido en línea: ' + this.itemsText(o) + ' (' + o.customerName + ')', amount: o.total, qty: units, cost: cost, date: new Date().toISOString() });
+this.saveHistory();
+this.showNotification('Pedido confirmado y cobrado');
+},
+async rejectOrder(o) {
+if (o.status !== 'pending') return;
+try { await window.FB.setOrderStatus(o.id, 'rejected', this.sellerName); this.showNotification('Pedido rechazado'); } catch (e) { this.showNotification('No se pudo rechazar. Revisa Internet'); }
+},
+async publishMenu() {
+let addr = '';
+try { addr = localStorage.getItem('sabor_address') || ''; } catch (e) {}
+const a = window.prompt('Dirección del negocio (se muestra a los clientes):', addr);
+if (a === null) return;
+try { localStorage.setItem('sabor_address', a); } catch (e) {}
+try {
+await window.FB.publishMenu({ items: this.dishes.map(d => ({ name: d.name, price: Number(d.price), image: d.image || '', desc: d.desc || '', comps: (d.comps || []).map(c => ({ name: c.name, price: Number(c.price) || 0 })) })), info: { address: a }, build: { price: Number(this.build.price) || 0, options: this.build.options } });
+this.showNotification('Menú publicado para los clientes');
+} catch (e) { this.showNotification('No se pudo publicar. Revisa Internet'); }
+},
+
+showNotification(msg) {
+this.toast.message = msg;
+this.toast.show = true;
+setTimeout(() => { this.toast.show = false; }, 2500);
+},
+
+loadStoredData() {
+let sI = null, sD = null, sH = null;
+try {
+sI = localStorage.getItem('sabor_ingredients');
+sD = localStorage.getItem('sabor_dishes');
+sH = localStorage.getItem('sabor_history');
+} catch (e) { console.error('Almacenamiento no disponible', e); }
+try {
+if (sI) { this.ingredients = JSON.parse(sI); }
+else {
+const now = new Date().toISOString();
+this.ingredients = [
+{ id: '1', name: 'Cartón de Huevos', totalCost: 155, units: 30, unitType: 'unidades', durabilityDays: 14, purchaseDate: now },
+{ id: '2', name: 'Medida de Frijoles', totalCost: 130, units: 5, unitType: 'libras', durabilityDays: 7, purchaseDate: now },
+{ id: '3', name: 'Queso Duro Blando', totalCost: 80, units: 2, unitType: 'libras', durabilityDays: 5, purchaseDate: now },
+{ id: '4', name: 'Plátanos Maduros', totalCost: 40, units: 10, unitType: 'unidades', durabilityDays: 4, purchaseDate: now }
+];
+this.saveIngredients();
+}
+if (sD) { this.dishes = JSON.parse(sD); }
+else {
+this.dishes = [
+{ id: '101', name: 'Desayuno Completo', price: 45, recipe: [
+{ ingredientId: '1', portion: '1' }, { ingredientId: '2', portion: '0.25' },
+{ ingredientId: '3', portion: '0.1' }, { ingredientId: '4', portion: '1' } ] },
+{ id: '102', name: 'Baleada Sencilla', price: 25, recipe: [
+{ ingredientId: '2', portion: '0.2' }, { ingredientId: '3', portion: '0.05' } ] }
+];
+this.saveDishes();
+}
+if (sH) { this.history = JSON.parse(sH); }
+else {
+const today = new Date().toISOString();
+this.history = [
+{ id: 'h1', type: 'sale', description: 'Venta: Desayuno Completo', amount: 45, date: today },
+{ id: 'h2', type: 'sale', description: 'Venta: Baleada Sencilla', amount: 25, date: today },
+{ id: 'h3', type: 'expense', description: 'Compra: Cartón de Huevos', amount: 155, date: today }
+];
+this.saveHistory();
+}
+} catch (e) { console.error('Error al cargar datos locales', e); }
+},
+
+saveIngredients() { try { localStorage.setItem('sabor_ingredients', JSON.stringify(this.ingredients)); } catch (e) { console.error(e); } },
+saveDishes() { try { localStorage.setItem('sabor_dishes', JSON.stringify(this.dishes)); } catch (e) { console.error(e); } },
+saveHistory() { try { localStorage.setItem('sabor_history', JSON.stringify(this.history)); } catch (e) { console.error(e); } },
+
+openIngredientModal() {
+this.editingIngredientId = null;
+this.ingredientForm = { name: '', totalCost: 0, units: 1, unitType: 'unidades', durabilityDays: 7 };
+this.showIngredientModal = true;
+},
+editIngredient(item) {
+this.editingIngredientId = item.id;
+this.ingredientForm = { ...item };
+this.showIngredientModal = true;
+},
+saveIngredient() {
+if (!this.ingredientForm.name.trim()) return;
+if (this.editingIngredientId) {
+const index = this.ingredients.findIndex(i => i.id === this.editingIngredientId);
+if (index !== -1) this.ingredients[index] = { ...this.ingredientForm, id: this.editingIngredientId };
+} else {
+const newIng = { ...this.ingredientForm, id: Date.now().toString(), purchaseDate: new Date().toISOString() };
+this.ingredients.push(newIng);
+this.history.unshift({ id: Date.now().toString() + '_h', type: 'expense', description: 'Compra: ' + newIng.name, amount: parseFloat(newIng.totalCost) || 0, date: newIng.purchaseDate });
+this.saveHistory();
+}
+this.saveIngredients();
+this.showIngredientModal = false;
+this.showNotification('Insumo guardado correctamente');
+},
+deleteIngredient(id) {
+this.ingredients = this.ingredients.filter(i => i.id !== id);
+this.saveIngredients();
+this.showNotification('Insumo eliminado');
+},
+getIngredientName(id) {
+const found = this.ingredients.find(i => i.id === id);
+return found ? found.name : 'Desconocido';
+},
+getDaysRemaining(item) {
+const expiry = new Date(item.purchaseDate);
+expiry.setDate(expiry.getDate() + parseInt(item.durabilityDays));
+return Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
+},
+
+pickDishPhoto(ev) {
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  if (f.type.indexOf('image/') !== 0) { this.showNotification('Por favor selecciona una imagen válida'); return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      // Redimensionar para mantener liviana la base de datos (máximo 600px y compresión JPEG 0.7)
+      const maxDim = 600;
+      const k = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k);
+      c.height = Math.round(img.height * k);
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      this.dishForm.image = c.toDataURL('image/jpeg', 0.7);
+      this.showNotification('Foto cargada con éxito');
+    };
+    img.onerror = () => { this.showNotification('No se pudo procesar la imagen'); };
+    img.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+},
+openDishModal() {
+this.editingDishId = null;
+this.dishForm = { name: '', price: 0, image: '', desc: '', recipe: [], comps: [] };
+this.addRecipeRow();
+this.showDishModal = true;
+},
+editDish(dish) {
+this.editingDishId = dish.id;
+this.dishForm = JSON.parse(JSON.stringify(dish)); if (!this.dishForm.comps) this.dishForm.comps = [];
+this.showDishModal = true;
+},
+addRecipeRow() { this.dishForm.recipe.push({ ingredientId: '', portion: '1' }); },
+removeRecipeRow(index) { this.dishForm.recipe.splice(index, 1); },
+saveDish() {
+if (!this.dishForm.name.trim()) return;
+this.dishForm.recipe = this.dishForm.recipe.filter(r => r.ingredientId); this.dishForm.comps = (this.dishForm.comps || []).filter(c => c.name && c.name.trim()).map(c => ({ name: c.name.trim(), price: Number(c.price) || 0 }));
+if (this.editingDishId) {
+const index = this.dishes.findIndex(d => d.id === this.editingDishId);
+if (index !== -1) this.dishes[index] = { ...this.dishForm, id: this.editingDishId };
+} else {
+this.dishes.push({ ...this.dishForm, id: Date.now().toString() });
+}
+this.saveDishes();
+this.showDishModal = false;
+this.showNotification('Plato guardado con éxito');
+},
+deleteDish(id) {
+this.dishes = this.dishes.filter(d => d.id !== id);
+this.saveDishes();
+this.showNotification('Plato eliminado');
+},
+calculateDishCost(dish) {
+if (!dish || !dish.recipe) return 0;
+let total = 0;
+dish.recipe.forEach(item => {
+const ing = this.ingredients.find(i => i.id === item.ingredientId);
+if (ing && ing.units > 0) total += (ing.totalCost / ing.units) * (parseFloat(item.portion) || 1);
+});
+return total;
+},
+calculateFormDishCost() { return this.calculateDishCost(this.dishForm); },
+calculateDishMargin(dish) {
+if (!dish || dish.price <= 0) return 0;
+return Math.round(((dish.price - this.calculateDishCost(dish)) / dish.price) * 100);
+},
+
+openQuickSaleModal() { this.showQuickSaleModal = true; },
+quickSell(dish) {
+this.history.unshift({ id: Date.now().toString(), type: 'sale', description: 'Venta: ' + dish.name, amount: parseFloat(dish.price), qty: 1, cost: this.calculateDishCost(dish), date: new Date().toISOString() });
+this.saveHistory();
+this.showNotification('Venta de ' + dish.name + ' registrada (+ ' + this.formatMoney(dish.price) + ')');
+},
+
+deleteHistoryItem(id) {
+this.history = this.history.filter(h => h.id !== id);
+this.saveHistory();
+this.showNotification('Registro eliminado');
+},
+get filteredHistory() {
+const now = new Date();
+return this.history.filter(item => {
+const d = new Date(item.date);
+if (this.historyFilter === 'today') return d.toDateString() === now.toDateString();
+if (this.historyFilter === 'week') return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+if (this.historyFilter === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+return true;
+});
+},
+get todayStats() {
+const todayStr = new Date().toDateString();
+let sales = 0, expenses = 0;
+this.history.forEach(item => {
+if (new Date(item.date).toDateString() === todayStr) {
+if (item.type === 'sale') sales += item.amount;
+if (item.type === 'expense') expenses += item.amount;
+}
+});
+return { sales, expenses, netProfit: sales - expenses };
+},
+get avgMargin() {
+if (this.dishes.length === 0) return 0;
+return Math.round(this.dishes.reduce((a, d) => a + this.calculateDishMargin(d), 0) / this.dishes.length);
+},
+get mostProfitableDish() {
+if (this.dishes.length === 0) return null;
+return [...this.dishes].sort((a, b) => this.calculateDishMargin(b) - this.calculateDishMargin(a))[0];
+},
+get leastProfitableDish() {
+if (this.dishes.length === 0) return null;
+return [...this.dishes].sort((a, b) => this.calculateDishMargin(a) - this.calculateDishMargin(b))[0];
+},
+get topUsedIngredients() {
+const map = {};
+this.dishes.forEach(d => d.recipe.forEach(r => { if (r.ingredientId) map[r.ingredientId] = (map[r.ingredientId] || 0) + 1; }));
+return Object.keys(map).map(id => ({ id, name: this.getIngredientName(id), count: map[id] })).sort((a, b) => b.count - a.count).slice(0, 3);
+},
+get leastUsedIngredients() {
+const map = {};
+this.ingredients.forEach(i => map[i.id] = 0);
+this.dishes.forEach(d => d.recipe.forEach(r => { if (r.ingredientId) map[r.ingredientId] = (map[r.ingredientId] || 0) + 1; }));
+return Object.keys(map).map(id => ({ id, name: this.getIngredientName(id), count: map[id] })).sort((a, b) => a.count - b.count).slice(0, 3);
+},
+get inventoryAlerts() {
+return this.ingredients.map(item => {
+const left = this.getDaysRemaining(item);
+if (left <= 1) return { id: item.id, name: item.name, status: 'Próximo a vencer / agotar' };
+if (left <= 3) return { id: item.id, name: item.name, status: 'Consumo pronto' };
+return null;
+}).filter(Boolean);
+},
+diagnosticProfitText() {
+const m = this.avgMargin;
+if (m >= 50) return '¡Excelente rentabilidad! Tienes un buen margen sobre el costo de tus insumos.';
+if (m >= 30) return 'Rentabilidad saludable. Monitorea los precios de tus insumos principales para mantener el margen.';
+return 'Atención: Tus costos de insumos están absorbiendo la mayoría de tus ingresos. Considera ajustar precios de venta.';
+},
+
+exportToCSV() {
+let csv = "ID,Tipo,Descripcion,Monto (Lps),Fecha\n";
+this.history.forEach(r => { csv += `${r.id},${r.type},"${r.description}",${r.amount},${r.date}\n`; });
+this.showNotification('La descarga no funciona dentro de la página publicada');
+try {
+const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = `Reporte_Golosa_${new Date().toISOString().slice(0,10)}.csv`;
+document.body.appendChild(a); a.click(); document.body.removeChild(a);
+} catch (e) { console.error(e); }
+},
+
+formatMoney(amount) { return 'Lps. ' + (parseFloat(amount) || 0).toFixed(2); },
+formatDate(s) { if (!s) return ''; return new Date(s).toLocaleDateString('es-HN', { day: '2-digit', month: '2-digit', year: 'numeric' }); },
+formatDateTime(s) { if (!s) return ''; const d = new Date(s); return d.toLocaleDateString('es-HN', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }); },
+todayDateFormatted() { return new Date().toLocaleDateString('es-HN', { weekday: 'short', day: 'numeric', month: 'short' }); }
+}
+}
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, getDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const app = initializeApp({
+  apiKey: "AIzaSyD8-tWvD-AhoWDrCUcqsyphpaCVtE6QMkI",
+  authDomain: "saborcontrol-30cbd.firebaseapp.com",
+  projectId: "saborcontrol-30cbd",
+  storageBucket: "saborcontrol-30cbd.firebasestorage.app",
+  messagingSenderId: "1046431066702",
+  appId: "1:1046431066702:web:f6bcc1586465a3949ef11f"
+});
+const db = getFirestore(app);
+const err = e => console.error("Firestore:", e);
+const toList = s => s.docs.map(d => ({ id: d.id, ...d.data() }));
+window.FB = {
+  addOrder: o => addDoc(collection(db, "orders"), o),
+  addReferral: async r => { const ref = doc(db, "referrals", r.friendPhone); const s = await getDoc(ref); if (!s.exists()) await setDoc(ref, r); },
+  updateReferral: (id, f) => updateDoc(doc(db, "referrals", id), f),
+  markFirstOrder: async phone => { const ref = doc(db, "referrals", phone); const s = await getDoc(ref); if (s.exists() && !s.data().firstOrder) await updateDoc(ref, { firstOrder: true, firstOrderAt: Date.now() }); },
+  watchReferrals: cb => { let first = true; return onSnapshot(collection(db, "referrals"), s => {
+    const ch = first ? [] : s.docChanges().map(c => ({ type: c.type, ...c.doc.data() }));
+    first = false; cb(toList(s), ch);
+  }, err); },
+  addOffer: o => addDoc(collection(db, "offers"), o),
+  watchOffers: (phone, cb) => { let first = true; return onSnapshot(query(collection(db, "offers"), where("to", "==", phone)), s => {
+    const added = first ? [] : s.docChanges().filter(c => c.type === "added").map(c => ({ id: c.doc.id, ...c.doc.data() }));
+    first = false; cb(toList(s).sort((a, b) => b.createdAt - a.createdAt), added);
+  }, err); },
+  updateOrder: (id, f) => updateDoc(doc(db, "orders", id), f),
+  addProof: async (data, name) => (await addDoc(collection(db, "proofs"), { data, name, createdAt: Date.now() })).id,
+  getProof: async id => { const s = await getDoc(doc(db, "proofs", id)); return s.exists() ? s.data() : null; },
+  setOrderStatus: (id, status, by) => updateDoc(doc(db, "orders", id), { status, by, confirmedAt: Date.now() }),
+  publishMenu: m => setDoc(doc(db, "menu", "current"), { ...m, updated: Date.now() }),
+  watchMenu: cb => onSnapshot(doc(db, "menu", "current"), s => cb(s.exists() ? s.data() : {}), err),
+  watchMyOrders: (phone, cb) => onSnapshot(query(collection(db, "orders"), where("phone", "==", phone)), s => cb(toList(s).sort((a, b) => b.createdAt - a.createdAt)), err),
+  watchOrders: cb => { let first = true; return onSnapshot(collection(db, "orders"), s => {
+    const added = first ? [] : s.docChanges().filter(c => c.type === "added").map(c => ({ id: c.doc.id, ...c.doc.data() }));
+    first = false; cb(toList(s), added);
+  }, err); }
+};
+window.dispatchEvent(new Event("fb-ready"));
+</script>
+<script>
+// Forzar actualización inmediata y limpiar cachés viejos
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for (let registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+if ('caches' in window) {
+  caches.keys().then(function(names) {
+    for (let name of names) caches.delete(name);
+  });
+}
+</script>
+</body>
+  </html>
