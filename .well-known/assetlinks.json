@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.gerardomont3s645_cloud.twa",
+    "sha256_cert_fingerprints": ["28:F2:F3:8D:61:D4:D6:9B:E1:3F:05:F3:73:71:C3:DD:23:05:66:F4:D7:6E:32:76:1C:DA:90:36:F2:63:A3:4F"]
+  }
+}]
